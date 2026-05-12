@@ -371,7 +371,7 @@ export function drawInitiativeCard(state: GameState): GameState {
     ...state,
     battleRound: {
       ...round,
-      subPhase: "selectDefender",
+      subPhase: "roll",
       initiativeDeck: deck,
       initiativeDiscard: discard,
       currentCard: card,
@@ -395,7 +395,7 @@ export function applySelectDefender(state: GameState, mechId: string): GameState
 
   return {
     ...state,
-    battleRound: { ...round, subPhase: "roll", defenderMechId: mechId },
+    battleRound: { ...round, subPhase: "resolve", defenderMechId: mechId },
     log: [...state.log, `${defPlayer.name} が「${mech.mechCard.name}」で防御`],
   };
 }
@@ -413,7 +413,7 @@ export function applyRollDice(state: GameState): GameState {
     ...state,
     battleRound: {
       ...round,
-      subPhase: maxRerolls > 0 ? "reroll" : "resolve",
+      subPhase: maxRerolls > 0 ? "reroll" : "selectDefender",
       diceResults: results,
       maxRerolls,
       rerollsUsed: 0,
@@ -440,7 +440,7 @@ export function applyRerollDice(state: GameState, indices: number[]): GameState 
       ...round,
       diceResults: newResults,
       rerollsUsed,
-      subPhase: rerollsUsed < round.maxRerolls ? "reroll" : "resolve",
+      subPhase: rerollsUsed < round.maxRerolls ? "reroll" : "selectDefender",
     },
     log: [...state.log, `リロール: [${newResults.join(", ")}]`],
   };

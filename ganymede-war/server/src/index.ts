@@ -142,6 +142,31 @@ function processCpuTurn(roomCode: string) {
       return;
     }
 
+    if (br.subPhase === "roll" && br.attackPlayerId === CPU_ID) {
+      setTimeout(() => {
+        const r = getRoomByCode(roomCode);
+        if (!r || r.state.battleRound?.subPhase !== "roll") return;
+        if (r.state.battleRound?.attackPlayerId !== CPU_ID) return;
+        r.state = applyRollDice(r.state);
+        broadcast(r.code, r.state);
+        processCpuTurn(roomCode);
+      }, 1400);
+      return;
+    }
+
+    if (br.subPhase === "reroll" && br.attackPlayerId === CPU_ID) {
+      setTimeout(() => {
+        const r = getRoomByCode(roomCode);
+        if (!r || r.state.battleRound?.subPhase !== "reroll") return;
+        if (r.state.battleRound?.attackPlayerId !== CPU_ID) return;
+        r.state = applyResolveAttack(r.state);
+        broadcast(r.code, r.state);
+        processCpuTurn(roomCode);
+      }, 1400);
+      return;
+    }
+
+
     if (br.subPhase === "selectDefender" && br.defensePlayerId === CPU_ID) {
       setTimeout(() => {
         const r = getRoomByCode(roomCode);
@@ -152,35 +177,21 @@ function processCpuTurn(roomCode: string) {
         r.state = applySelectDefender(r.state, mechId);
         broadcast(r.code, r.state);
         processCpuTurn(roomCode);
-      }, 800);
+      }, 1400);
       return;
     }
 
-    if (br.subPhase === "roll" && br.attackPlayerId === CPU_ID) {
+    if (br.subPhase === "resolve" && br.attackPlayerId === CPU_ID) {
       setTimeout(() => {
         const r = getRoomByCode(roomCode);
-        if (!r || r.state.battleRound?.subPhase !== "roll") return;
-        if (r.state.battleRound?.attackPlayerId !== CPU_ID) return;
-        r.state = applyRollDice(r.state);
-        broadcast(r.code, r.state);
-        processCpuTurn(roomCode);
-      }, 800);
-      return;
-    }
-
-    if ((br.subPhase === "reroll" || br.subPhase === "resolve") && br.attackPlayerId === CPU_ID) {
-      setTimeout(() => {
-        const r = getRoomByCode(roomCode);
-        const sub = r?.state.battleRound?.subPhase;
-        if (!r || (sub !== "reroll" && sub !== "resolve")) return;
+        if (!r || r.state.battleRound?.subPhase !== "resolve") return;
         if (r.state.battleRound?.attackPlayerId !== CPU_ID) return;
         r.state = applyResolveAttack(r.state);
         broadcast(r.code, r.state);
         processCpuTurn(roomCode);
-      }, 800);
+      }, 1400);
       return;
     }
-
     if (br.subPhase === "inherit" && br.inheritPlayerId === CPU_ID) {
       setTimeout(() => {
         const r = getRoomByCode(roomCode);
@@ -190,7 +201,7 @@ function processCpuTurn(roomCode: string) {
         r.state = applyInheritSoul(r.state, mechId);
         broadcast(r.code, r.state);
         processCpuTurn(roomCode);
-      }, 800);
+      }, 1400);
       return;
     }
   }
