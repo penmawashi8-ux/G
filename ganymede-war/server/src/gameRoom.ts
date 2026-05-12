@@ -1,5 +1,7 @@
 import { GameState } from "../../shared/types";
-import { generateRoomCode, createInitialGameState } from "./gameEngine";
+import { generateRoomCode, createInitialGameState, startDraft } from "./gameEngine";
+import { MECH_LEADERS, MECH_SUPPORTS, ALL_PARTS } from "./cardData";
+import { CPU_ID } from "./cpuPlayer";
 
 interface Room {
   code: string;
@@ -17,6 +19,7 @@ export function createRoom(socketId: string, playerName: string): Room {
   state.players.push({
     id: playerId,
     name: playerName,
+    isCpu: false,
     mechs: [],
     hand: [],
     selectedMechs: [],
@@ -33,6 +36,26 @@ export function createRoom(socketId: string, playerName: string): Room {
   return room;
 }
 
+export function addCpuPlayer(room: Room): void {
+  room.state.hasCpu = true;
+  room.state.players.push({
+    id: CPU_ID,
+    name: "CPU",
+    isCpu: true,
+    mechs: [],
+    hand: [],
+    selectedMechs: [],
+    isReady: false,
+  });
+  const playerIds = room.state.players.map((p) => p.id);
+  room.state = {
+    ...room.state,
+    phase: "draft",
+    draftState: startDraft(MECH_LEADERS, MECH_SUPPORTS, ALL_PARTS, playerIds),
+    log: ["ドラフト開始！"],
+  };
+}
+
 export function joinRoom(
   code: string,
   socketId: string,
@@ -46,6 +69,7 @@ export function joinRoom(
   room.state.players.push({
     id: playerId,
     name: playerName,
+    isCpu: false,
     mechs: [],
     hand: [],
     selectedMechs: [],

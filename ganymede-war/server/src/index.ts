@@ -26,12 +26,22 @@ import {
 import {
   createRoom,
   joinRoom,
+  addCpuPlayer,
+  getRoomByCode,
   getRoomBySocketId,
   getPlayerIdBySocket,
   removePlayerBySocket,
   setAssemblyTimer,
   clearAssemblyTimer,
 } from "./gameRoom";
+
+import {
+  CPU_ID,
+  cpuDraftPick,
+  cpuBuildAssembly,
+  cpuSelectDefenderMech,
+  cpuSelectInherit,
+} from "./cpuPlayer";
 
 import { MECH_LEADERS, MECH_SUPPORTS, ALL_PARTS } from "./cardData";
 
@@ -66,6 +76,126 @@ function broadcast(roomCode: string, state: GameState) {
   io.to(roomCode).emit("game_state", state);
 }
 
+// Schedules a single CPU action based on the current game phase/subphase.
+// Call after every state mutation in a CPU room.
+function processCpuTurn(roomCode: string) {
+  const room = getRoomByCode(roomCode);
+  if (!room || !room.state.hasCpu) return;
+
+  const state = room.state;
+
+  // Draft
+  if (state.phase === "draft" && state.draftState) {
+    const pickerId = state.draftState.pickOrder[state.draftState.currentPickerIndex];
+    if (pickerId === CPU_ID) {
+      setTimeout(() => {
+        const r = getRoomByCode(roomCode);
+        if (!r || r.state.phase !== "draft") return;
+        if (r.state.draftState?.pickOrder[r.state.draftState.currentPickerIndex] !== CPU_ID) return;
+        const cardId = cpuDraftPick(r.state);
+        if (!cardId) return;
+        r.state = applyDraftPick(r.state, CPU_ID, cardId);
+        if (r.state.phase === "assembly") {
+          setAssemblyTimer(r, () => {
+            r.state = forceAssemblyTimeout(r.state);
+            broadcast(r.code, r.state);
+          });
+        }
+        broadcast(r.code, r.state);
+        processCpuTurn(roomCode);
+      }, 900);
+    }
+    return;
+  }
+
+  // Assembly
+  if (state.phase === "assembly" && state.assemblyData) {
+    if (!state.assemblyData.confirmed.includes(CPU_ID)) {
+      setTimeout(() => {
+        const r = getRoomByCode(roomCode);
+        if (!r || r.state.phase !== "assembly") return;
+        if (r.state.assemblyData?.confirmed.includes(CPU_ID)) return;
+        const payload = cpuBuildAssembly(r.state);
+        r.state = applyAssemblyConfirm(r.state, CPU_ID, payload);
+        if (r.state.phase === "battle") clearAssemblyTimer(r);
+        broadcast(r.code, r.state);
+        processCpuTurn(roomCode);
+      }, 900);
+    }
+    return;
+  }
+
+  // Battle
+  if (state.phase === "battle" && state.battleRound) {
+    const br = state.battleRound;
+
+    if (br.subPhase === "draw") {
+      // CPU auto-draws (any player can draw; only do it if it's a CPU-only action needed)
+      // We auto-draw only when the CPU is the attacker of the *next* card or general draw
+      setTimeout(() => {
+        const r = getRoomByCode(roomCode);
+        if (!r || r.state.battleRound?.subPhase !== "draw") return;
+        r.state = drawInitiativeCard(r.state);
+        broadcast(r.code, r.state);
+        processCpuTurn(roomCode);
+      }, 1500);
+      return;
+    }
+
+    if (br.subPhase === "selectDefender" && br.defensePlayerId === CPU_ID) {
+      setTimeout(() => {
+        const r = getRoomByCode(roomCode);
+        if (!r || r.state.battleRound?.subPhase !== "selectDefender") return;
+        if (r.state.battleRound?.defensePlayerId !== CPU_ID) return;
+        const mechId = cpuSelectDefenderMech(r.state);
+        if (!mechId) return;
+        r.state = applySelectDefender(r.state, mechId);
+        broadcast(r.code, r.state);
+        processCpuTurn(roomCode);
+      }, 800);
+      return;
+    }
+
+    if (br.subPhase === "roll" && br.attackPlayerId === CPU_ID) {
+      setTimeout(() => {
+        const r = getRoomByCode(roomCode);
+        if (!r || r.state.battleRound?.subPhase !== "roll") return;
+        if (r.state.battleRound?.attackPlayerId !== CPU_ID) return;
+        r.state = applyRollDice(r.state);
+        broadcast(r.code, r.state);
+        processCpuTurn(roomCode);
+      }, 800);
+      return;
+    }
+
+    if ((br.subPhase === "reroll" || br.subPhase === "resolve") && br.attackPlayerId === CPU_ID) {
+      setTimeout(() => {
+        const r = getRoomByCode(roomCode);
+        const sub = r?.state.battleRound?.subPhase;
+        if (!r || (sub !== "reroll" && sub !== "resolve")) return;
+        if (r.state.battleRound?.attackPlayerId !== CPU_ID) return;
+        r.state = applyResolveAttack(r.state);
+        broadcast(r.code, r.state);
+        processCpuTurn(roomCode);
+      }, 800);
+      return;
+    }
+
+    if (br.subPhase === "inherit" && br.inheritPlayerId === CPU_ID) {
+      setTimeout(() => {
+        const r = getRoomByCode(roomCode);
+        if (!r || r.state.battleRound?.subPhase !== "inherit") return;
+        if (r.state.battleRound?.inheritPlayerId !== CPU_ID) return;
+        const mechId = cpuSelectInherit(r.state);
+        r.state = applyInheritSoul(r.state, mechId);
+        broadcast(r.code, r.state);
+        processCpuTurn(roomCode);
+      }, 800);
+      return;
+    }
+  }
+}
+
 io.on("connection", (socket) => {
   console.log(`connected: ${socket.id}`);
 
@@ -75,6 +205,16 @@ io.on("connection", (socket) => {
     socket.join(room.code);
     cb(room.code);
     broadcast(room.code, room.state);
+  });
+
+  // ── CPU対戦ルーム作成 ────────────────────────────
+  socket.on("create_cpu_room", (playerName, cb) => {
+    const room = createRoom(socket.id, playerName);
+    socket.join(room.code);
+    addCpuPlayer(room);
+    cb(room.code);
+    broadcast(room.code, room.state);
+    processCpuTurn(room.code);
   });
 
   // ── ルーム参加 ──────────────────────────────────────
@@ -112,6 +252,7 @@ io.on("connection", (socket) => {
       });
     }
     broadcast(room.code, room.state);
+    processCpuTurn(room.code);
   });
 
   // ── アセンブリ確定 ────────────────────────────────
@@ -125,6 +266,7 @@ io.on("connection", (socket) => {
 
     if (room.state.phase === "battle") clearAssemblyTimer(room);
     broadcast(room.code, room.state);
+    processCpuTurn(room.code);
   });
 
   // ── 防御メック選択 ────────────────────────────────
@@ -138,6 +280,7 @@ io.on("connection", (socket) => {
 
     room.state = applySelectDefender(room.state, mechId);
     broadcast(room.code, room.state);
+    processCpuTurn(room.code);
   });
 
   // ── サイコロを振る / カードを引く ─────────────────
@@ -156,6 +299,7 @@ io.on("connection", (socket) => {
       room.state = applyRollDice(room.state);
     }
     broadcast(room.code, room.state);
+    processCpuTurn(room.code);
   });
 
   // ── リロール / 攻撃確定 ──────────────────────────
@@ -176,6 +320,7 @@ io.on("connection", (socket) => {
       room.state = applyRerollDice(room.state, indices);
     }
     broadcast(room.code, room.state);
+    processCpuTurn(room.code);
   });
 
   // ── 魂の継承 ────────────────────────────────────
@@ -189,6 +334,7 @@ io.on("connection", (socket) => {
 
     room.state = applyInheritSoul(room.state, targetMechId);
     broadcast(room.code, room.state);
+    processCpuTurn(room.code);
   });
 
   // ── 切断 ──────────────────────────────────────
