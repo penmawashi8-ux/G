@@ -6,6 +6,7 @@ import PartCardUI from "./PartCardUI";
 export default function DraftBoard() {
   const { gameState, playerId, socket } = useGameStore();
   const [hoverPartId, setHoverPartId] = useState<string | null>(null);
+  const [selectedPartId, setSelectedPartId] = useState<string | null>(null);
   if (!gameState || !gameState.draftState) return null;
 
   const draft = gameState.draftState;
@@ -15,6 +16,7 @@ export default function DraftBoard() {
   function pick(cardId: string) {
     if (!myTurn) return;
     socket?.emit("draft_pick", cardId);
+    setSelectedPartId(null);
   }
 
   const stepLabel =
@@ -73,21 +75,32 @@ export default function DraftBoard() {
           <div className="flex flex-wrap gap-2">
             {draft.availableParts.map((part) => (
               <div key={part.id} onMouseEnter={() => setHoverPartId(part.id)} onMouseLeave={() => setHoverPartId(null)}>
-                <PartCardUI part={part} onClick={() => pick(part.id)} disabled={!myTurn} />
+                <PartCardUI
+                  part={part}
+                  onClick={() => setSelectedPartId(part.id)}
+                  disabled={!myTurn}
+                  selected={selectedPartId === part.id}
+                />
               </div>
             ))}
           </div>
+          {myTurn && selectedPartId && (
+            <div className="mt-3 rounded-lg border border-blue-500/60 bg-slate-900/90 p-3 flex items-center justify-between">
+              <div className="text-sm text-blue-100">選択中: {draft.availableParts.find((p) => p.id === selectedPartId)?.name}</div>
+              <button className="btn-success" onClick={() => pick(selectedPartId)}>この武器を確定</button>
+            </div>
+          )}
           {hoverPart && me && me.selectedMechs.length > 0 && (
-            <div className="mt-3 text-xs text-gray-300">
-              <span className="text-blue-300 font-bold">装着シミュレーション: {hoverPart.name}</span>
-              <div className="flex flex-wrap gap-3 mt-1">
+            <div className="mt-3 text-sm text-gray-200 rounded-lg border border-cyan-500/40 bg-slate-950/80 p-3">
+              <span className="text-cyan-300 font-bold">装着シミュレーション: {hoverPart.name}</span>
+              <div className="flex flex-wrap gap-3 mt-2">
                 {me.selectedMechs.map((m) => {
                   const s = simulateStats(m);
                   if (!s) return null;
                   return (
-                    <div key={m.id} className="px-2 py-1 rounded border border-gray-700">
-                      <span className="text-white">{m.name}</span>
-                      <span className="ml-2">SP {s.sp} / HP {s.hp} / AIM {s.aim} / 🎲 {s.dice} / ↩ {s.reroll}</span>
+                    <div key={m.id} className="px-3 py-2 rounded border border-cyan-600/40 bg-slate-900">
+                      <span className="text-white font-semibold">{m.name}</span>
+                      <span className="ml-2 text-cyan-100">SP {s.sp} / HP {s.hp} / AIM {s.aim} / 🎲 {s.dice} / ↩ {s.reroll}</span>
                     </div>
                   );
                 })}

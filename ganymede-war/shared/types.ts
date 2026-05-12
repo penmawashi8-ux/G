@@ -111,6 +111,7 @@ export interface BattleRound {
   diceResults: number[];
   rerollsUsed: number;
   maxRerolls: number;
+  pendingHits: number;
   pendingDestroyedMechId: string | null;
   inheritPlayerId: string | null;
 }
