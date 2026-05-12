@@ -12,7 +12,9 @@ export function useSocket() {
   useEffect(() => {
     if (socket) return;
 
-    const s: AppSocket = io({ path: "/socket.io", transports: ["websocket", "polling"] });
+    // VITE_SERVER_URL = Railway URL in production; empty = same-origin (dev proxy)
+    const serverUrl = import.meta.env.VITE_SERVER_URL ?? "";
+    const s: AppSocket = io(serverUrl, { path: "/socket.io", transports: ["websocket", "polling"] });
 
     s.on("connect", () => {
       setPlayerId(s.id ?? "");
