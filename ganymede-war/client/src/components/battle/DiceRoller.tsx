@@ -10,6 +10,7 @@ interface DiceRollerProps {
   onRoll: () => void;
   onReroll: (indices: number[]) => void;
   onConfirm: () => void;
+  onResolve: () => void;
 }
 
 export default function DiceRoller({
@@ -21,6 +22,7 @@ export default function DiceRoller({
   onRoll,
   onReroll,
   onConfirm,
+  onResolve,
 }: DiceRollerProps) {
   const [selectedIndices, setSelectedIndices] = useState<number[]>([]);
 
@@ -106,7 +108,7 @@ export default function DiceRoller({
       )}
 
       {isAttacker && subPhase === "resolve" && (
-        <button className="btn-success text-lg px-6" onClick={onConfirm}>
+        <button className="btn-success text-lg px-6" onClick={onResolve}>
           ダメージ確定
         </button>
       )}

@@ -38,13 +38,19 @@ interface MechSlotEditorProps {
   onAssign: (slot: "right" | "left" | "backpack", partId: string | undefined) => void;
   directionChoice: Direction;
   onDirectionChange: (d: Direction) => void;
+  previousAssignment: SlotAssignment;
 }
 
-function MechSlotEditor({ label, mechCard, assignment, hand, usedPartIds, onAssign, directionChoice, onDirectionChange }: MechSlotEditorProps) {
+function MechSlotEditor({ label, mechCard, assignment, hand, usedPartIds, onAssign, directionChoice, onDirectionChange, previousAssignment }: MechSlotEditorProps) {
   const rightPart = hand.find((p) => p.id === assignment.right);
   const leftPart = hand.find((p) => p.id === assignment.left);
   const backpackPart = hand.find((p) => p.id === assignment.backpack);
   const stats = computePreviewStats(mechCard.baseStats, { right: rightPart, left: leftPart, backpack: backpackPart });
+  const prevStats = computePreviewStats(mechCard.baseStats, {
+    right: hand.find((p) => p.id === previousAssignment.right),
+    left: hand.find((p) => p.id === previousAssignment.left),
+    backpack: hand.find((p) => p.id === previousAssignment.backpack),
+  });
   const valid = isValid(stats);
   const isOddSP = stats.sp % 2 !== 0;
 
@@ -86,6 +92,17 @@ function MechSlotEditor({ label, mechCard, assignment, hand, usedPartIds, onAssi
             <div key={label} className="flex gap-1">
               <span className="text-gray-500">{label}</span>
               <span className={`font-bold ${value <= 0 ? "text-red-400" : "text-white"}`}>{value}</span>
+            </div>
+          ))}
+        </div>
+      </div>
+      <div className="rounded-lg border border-blue-900/60 bg-blue-950/20 p-2 text-xs">
+        <div className="text-blue-300 font-bold mb-1">シミュレーション（前回装備 → 現在装備）</div>
+        <div className="grid grid-cols-5 gap-2 text-center">
+          {(["sp", "hp", "aim", "dice", "reroll"] as const).map((k) => (
+            <div key={k}>
+              <div className="text-gray-500 uppercase">{k}</div>
+              <div className="text-gray-300">{prevStats[k]} → <span className="text-white font-bold">{stats[k]}</span></div>
             </div>
           ))}
         </div>
@@ -158,6 +175,8 @@ export default function MechAssembly() {
   const [supportAssign, setSupportAssign] = useState<SlotAssignment>({});
   const [leaderDir, setLeaderDir] = useState<Direction>("right");
   const [supportDir, setSupportDir] = useState<Direction>("right");
+  const [prevLeaderAssign, setPrevLeaderAssign] = useState<SlotAssignment>({});
+  const [prevSupportAssign, setPrevSupportAssign] = useState<SlotAssignment>({});
   const [confirmed, setConfirmed] = useState(false);
   const [showAnimation, setShowAnimation] = useState(false);
 
@@ -268,9 +287,13 @@ export default function MechAssembly() {
                   assignment={leaderAssign}
                   hand={hand}
                   usedPartIds={usedPartIds}
-                  onAssign={(slot, partId) => setLeaderAssign((prev) => ({ ...prev, [slot]: partId }))}
+                  onAssign={(slot, partId) => setLeaderAssign((prev) => {
+                    setPrevLeaderAssign(prev);
+                    return { ...prev, [slot]: partId };
+                  })}
                   directionChoice={leaderDir}
                   onDirectionChange={setLeaderDir}
+                  previousAssignment={prevLeaderAssign}
                 />
                 <MechSlotEditor
                   label="僚機"
@@ -278,9 +301,13 @@ export default function MechAssembly() {
                   assignment={supportAssign}
                   hand={hand}
                   usedPartIds={usedPartIds}
-                  onAssign={(slot, partId) => setSupportAssign((prev) => ({ ...prev, [slot]: partId }))}
+                  onAssign={(slot, partId) => setSupportAssign((prev) => {
+                    setPrevSupportAssign(prev);
+                    return { ...prev, [slot]: partId };
+                  })}
                   directionChoice={supportDir}
                   onDirectionChange={setSupportDir}
+                  previousAssignment={prevSupportAssign}
                 />
                 <button
                   className="btn-success text-lg py-3 w-full"

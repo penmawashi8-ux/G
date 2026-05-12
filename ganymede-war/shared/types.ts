@@ -147,6 +147,7 @@ export interface ClientToServerEvents {
   select_defender: (mechId: string) => void;
   roll_dice: () => void;
   reroll_dice: (indices: number[]) => void;
+  resolve_attack: () => void;
   inherit_soul: (targetMechId: string | null) => void;
 }
 
