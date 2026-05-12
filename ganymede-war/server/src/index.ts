@@ -20,6 +20,7 @@ import {
   applyRollDice,
   applyRerollDice,
   applyResolveAttack,
+  applyApplyDamage,
   applyInheritSoul,
 } from "./gameEngine";
 
@@ -290,6 +291,11 @@ io.on("connection", (socket) => {
     if (!br || br.defensePlayerId !== playerId || br.subPhase !== "selectDefender") return;
 
     room.state = applySelectDefender(room.state, mechId);
+    if (room.state.battleRound?.pendingHits && room.state.battleRound.pendingHits > 0) {
+      room.state = applyApplyDamage(room.state);
+    } else {
+      room.state = { ...room.state, battleRound: room.state.battleRound ? { ...room.state.battleRound, subPhase: "draw" } : null };
+    }
     broadcast(room.code, room.state);
     processCpuTurn(room.code);
   });

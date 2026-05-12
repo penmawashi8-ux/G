@@ -282,6 +282,7 @@ function finalizeAssembly(state: GameState): GameState {
       diceResults: [],
       rerollsUsed: 0,
       maxRerolls: 0,
+      pendingHits: 0,
       pendingDestroyedMechId: null,
       inheritPlayerId: null,
     },
@@ -395,8 +396,8 @@ export function applySelectDefender(state: GameState, mechId: string): GameState
 
   return {
     ...state,
-    battleRound: { ...round, subPhase: "resolve", defenderMechId: mechId },
-    log: [...state.log, `${defPlayer.name} が「${mech.mechCard.name}」で防御`],
+    battleRound: { ...round, subPhase: "draw", defenderMechId: mechId },
+    log: [...state.log, `${defPlayer.name} が「${mech.mechCard.name}」を被弾対象に選択`],
   };
 }
 
@@ -451,11 +452,24 @@ export function applyResolveAttack(state: GameState): GameState {
   const attacker = getAttackerMech(state);
   if (!attacker) return state;
 
-  const defender = getDefenderMech(state);
-  if (!defender) return state;
-
   const aim = attacker.computedStats.aim + attacker.inheritBonus.aim;
   const hits = round.diceResults.filter((d) => d <= aim).length;
+  return {
+    ...state,
+    battleRound: {
+      ...round,
+      subPhase: "selectDefender",
+      pendingHits: hits,
+    },
+    log: [...state.log, `攻撃確定: ${hits}ヒット。防御側が被弾メックを選択`],
+  };
+}
+
+export function applyApplyDamage(state: GameState): GameState {
+  const round = state.battleRound!;
+  const defender = getDefenderMech(state);
+  if (!defender) return state;
+  const hits = round.pendingHits;
 
   const defPlayer = state.players.find((p) => p.id === round.defensePlayerId)!;
   const newPlayers = state.players.map((player) => {
@@ -517,7 +531,7 @@ export function applyResolveAttack(state: GameState): GameState {
 
   return {
     ...updatedState,
-    battleRound: { ...round, subPhase: "draw" },
+    battleRound: { ...round, subPhase: "draw", pendingHits: 0 },
     log: [...state.log, logEntry],
   };
 }
