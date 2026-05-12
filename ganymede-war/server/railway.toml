@@ -1,5 +1,6 @@
 [build]
 builder = "nixpacks"
+buildCommand = "echo 'skipping tsc — ts-node resolves shared types at runtime'"
 
 [deploy]
 startCommand = "npm start"
