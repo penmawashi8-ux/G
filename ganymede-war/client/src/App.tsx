@@ -5,6 +5,7 @@ import DraftBoard from "./components/draft/DraftBoard";
 import MechAssembly from "./components/mech/MechAssembly";
 import BattleField from "./components/battle/BattleField";
 import GameOver from "./components/ui/GameOver";
+import UpdatePrompt from "./components/UpdatePrompt";
 
 export default function App() {
   useSocket();
@@ -32,6 +33,7 @@ export default function App() {
         {phase === "battle" && <BattleField />}
         {phase === "ended" && <GameOver />}
       </main>
+      <UpdatePrompt />
     </div>
   );
 }
