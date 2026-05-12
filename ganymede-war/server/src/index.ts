@@ -334,6 +334,20 @@ io.on("connection", (socket) => {
     processCpuTurn(room.code);
   });
 
+  socket.on("resolve_attack", () => {
+    const room = getRoomBySocketId(socket.id);
+    if (!room) return;
+    const playerId = getPlayerIdBySocket(room, socket.id);
+    if (!playerId) return;
+    const br = room.state.battleRound;
+    if (room.state.phase !== "battle" || !br) return;
+    if (br.subPhase !== "resolve" || br.attackPlayerId !== playerId) return;
+
+    room.state = applyResolveAttack(room.state);
+    broadcast(room.code, room.state);
+    processCpuTurn(room.code);
+  });
+
   // ── 魂の継承 ────────────────────────────────────
   socket.on("inherit_soul", (targetMechId) => {
     const room = getRoomBySocketId(socket.id);

@@ -1,4 +1,5 @@
 import { useGameStore } from "../../store/gameStore";
+import { useEffect, useRef } from "react";
 import MechStatus from "../mech/MechStatus";
 import DiceRoller from "./DiceRoller";
 import InitiativeCardUI from "./InitiativeCardUI";
@@ -40,6 +41,9 @@ export default function BattleField() {
   function handleConfirm() {
     socket?.emit("reroll_dice", []);
   }
+  function handleResolve() {
+    socket?.emit("resolve_attack");
+  }
 
   function handleSelectDefender(mechId: string) {
     socket?.emit("select_defender", mechId);
@@ -54,6 +58,30 @@ export default function BattleField() {
 
   const canInherit = br.subPhase === "inherit" && br.inheritPlayerId === playerId;
   const inheritTargets = me.mechs.filter((m) => !m.isDestroyed && m.inheritedMechId === null);
+  const audioContextRef = useRef<AudioContext | null>(null);
+  const lastSubPhase = useRef(br.subPhase);
+
+  useEffect(() => {
+    if (!audioContextRef.current) audioContextRef.current = new AudioContext();
+    const ctx = audioContextRef.current;
+    const playTone = (freq: number, duration = 0.08, type: OscillatorType = "square", volume = 0.05) => {
+      const osc = ctx.createOscillator();
+      const gain = ctx.createGain();
+      osc.type = type;
+      osc.frequency.value = freq;
+      gain.gain.value = volume;
+      osc.connect(gain).connect(ctx.destination);
+      osc.start();
+      osc.stop(ctx.currentTime + duration);
+    };
+    if (lastSubPhase.current !== br.subPhase) {
+      if (br.subPhase === "roll") playTone(440);
+      if (br.subPhase === "selectDefender") { playTone(523); playTone(659, 0.06); }
+      if (br.subPhase === "resolve") playTone(220, 0.12, "sawtooth");
+      if (br.subPhase === "inherit") { playTone(784, 0.1, "triangle"); playTone(988, 0.1, "triangle"); }
+      lastSubPhase.current = br.subPhase;
+    }
+  }, [br.subPhase]);
 
   return (
     <div className="p-2 sm:p-4 flex flex-col gap-3 sm:gap-4 max-w-4xl mx-auto">
@@ -121,6 +149,7 @@ export default function BattleField() {
               onRoll={handleRoll}
               onReroll={handleReroll}
               onConfirm={handleConfirm}
+              onResolve={handleResolve}
             />
           )}
           {!isAttacker && (
