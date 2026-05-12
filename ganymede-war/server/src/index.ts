@@ -36,18 +36,30 @@ import {
 import { MECH_LEADERS, MECH_SUPPORTS, ALL_PARTS } from "./cardData";
 
 const app = express();
-app.use(cors());
+// CORS — CLIENT_URL accepts comma-separated origins (e.g. Vercel + preview URL)
+const allowedOrigins: string | string[] = process.env.CLIENT_URL
+  ? process.env.CLIENT_URL.split(",").map((s) => s.trim())
+  : "*";
+
+app.use(cors({ origin: allowedOrigins }));
 app.use(express.json());
 
+// Health check (Railway / uptime monitors)
+app.get("/health", (_req, res) => res.json({ status: "ok" }));
+
+// Static files — only used when self-hosting (client/dist built locally)
 const clientDist = path.resolve(__dirname, "../../client/dist");
 app.use(express.static(clientDist));
 app.get("*", (_req, res) => {
-  res.sendFile(path.join(clientDist, "index.html"));
+  const indexPath = path.join(clientDist, "index.html");
+  res.sendFile(indexPath, (err) => {
+    if (err) res.status(200).json({ status: "ganymede-war server" });
+  });
 });
 
 const httpServer = createServer(app);
 const io = new Server<ClientToServerEvents, ServerToClientEvents>(httpServer, {
-  cors: { origin: "*" },
+  cors: { origin: allowedOrigins },
 });
 
 function broadcast(roomCode: string, state: GameState) {
