@@ -454,7 +454,7 @@ export function applyResolveAttack(state: GameState): GameState {
   const defender = getDefenderMech(state);
   if (!defender) return state;
 
-  const aim = attacker.computedStats.aim;
+  const aim = attacker.computedStats.aim + attacker.inheritBonus.aim;
   const hits = round.diceResults.filter((d) => d <= aim).length;
 
   const defPlayer = state.players.find((p) => p.id === round.defensePlayerId)!;

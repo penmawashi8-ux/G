@@ -56,9 +56,9 @@ export default function BattleField() {
   const inheritTargets = me.mechs.filter((m) => !m.isDestroyed && m.inheritedMechId === null);
 
   return (
-    <div className="p-4 flex flex-col gap-4 max-w-4xl mx-auto">
+    <div className="p-2 sm:p-4 flex flex-col gap-3 sm:gap-4 max-w-4xl mx-auto">
       {/* Opponent mechs */}
-      <div>
+      <div className="card-base p-2 sm:p-3">
         <h3 className="text-xs text-gray-500 uppercase tracking-widest mb-2">
           {opponent?.name ?? "相手"} のメック
         </h3>
@@ -114,7 +114,7 @@ export default function BattleField() {
           {attackerMech && (
             <DiceRoller
               results={br.diceResults}
-              aim={attackerMech.computedStats.aim}
+              aim={attackerMech.computedStats.aim + attackerMech.inheritBonus.aim}
               rerollsRemaining={br.maxRerolls - br.rerollsUsed}
               isAttacker={isAttacker}
               subPhase={br.subPhase}
@@ -152,7 +152,7 @@ export default function BattleField() {
       )}
 
       {/* My mechs */}
-      <div>
+      <div className="card-base p-2 sm:p-3">
         <h3 className="text-xs text-gray-500 uppercase tracking-widest mb-2">
           {me.name} のメック
         </h3>
@@ -169,7 +169,9 @@ export default function BattleField() {
       </div>
 
       {/* Game log */}
-      <GameLog />
+      <div className="hidden sm:block">
+        <GameLog />
+      </div>
     </div>
   );
 }
