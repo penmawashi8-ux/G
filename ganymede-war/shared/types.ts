@@ -60,6 +60,7 @@ export interface AssembledMech {
 export interface Player {
   id: string;
   name: string;
+  isCpu: boolean;
   mechs: AssembledMech[];      // populated after assembly
   hand: PartCard[];             // during draft/assembly
   selectedMechs: MechCard[];   // [0]=leader, [1]=support; set during draft
@@ -117,6 +118,7 @@ export interface BattleRound {
 export interface GameState {
   roomCode: string;
   phase: GamePhase;
+  hasCpu: boolean;
   players: Player[];
   draftState: DraftState | null;
   assemblyData: AssemblyData | null;
@@ -135,6 +137,7 @@ export interface AssemblyConfirmPayload {
 
 export interface ClientToServerEvents {
   create_room: (playerName: string, cb: (roomCode: string) => void) => void;
+  create_cpu_room: (playerName: string, cb: (roomCode: string) => void) => void;
   join_room: (
     data: { roomCode: string; playerName: string },
     cb: (error?: string) => void

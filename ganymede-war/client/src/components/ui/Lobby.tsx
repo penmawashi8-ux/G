@@ -17,6 +17,13 @@ export default function Lobby() {
     });
   }
 
+  function handleCpuGame() {
+    if (!socket || !playerName.trim()) return;
+    socket.emit("create_cpu_room", playerName.trim(), (code) => {
+      setRoomCode(code);
+    });
+  }
+
   function handleJoin() {
     if (!socket || !playerName.trim() || !joinCode.trim()) return;
     setError("");
@@ -70,6 +77,13 @@ export default function Lobby() {
         <div className="flex flex-col gap-3 w-full max-w-sm">
           <button
             className="btn-primary text-lg py-3"
+            onClick={handleCpuGame}
+            disabled={!isConnected || !playerName.trim()}
+          >
+            CPU対戦
+          </button>
+          <button
+            className="btn-ghost text-lg py-3"
             onClick={() => setMode("create")}
             disabled={!isConnected || !playerName.trim()}
           >

@@ -603,6 +603,7 @@ export function createInitialGameState(roomCode: string): GameState {
   return {
     roomCode,
     phase: "lobby",
+    hasCpu: false,
     players: [],
     draftState: null,
     assemblyData: null,
