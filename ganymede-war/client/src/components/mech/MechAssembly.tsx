@@ -168,7 +168,7 @@ export default function MechAssembly() {
 
   const [leaderCard, supportCard] = me.selectedMechs;
   const deadline = gameState.assemblyData?.deadline ?? Date.now() + 60_000;
-  const myConfirmed = gameState.assemblyData?.confirmed.includes(playerId) ?? false;
+  const myConfirmed = playerId != null && (gameState.assemblyData?.confirmed.includes(playerId) ?? false);
   const opponentConfirmed = gameState.players
     .filter((p) => p.id !== playerId)
     .every((p) => gameState.assemblyData?.confirmed.includes(p.id));
