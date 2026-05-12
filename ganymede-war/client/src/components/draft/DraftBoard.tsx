@@ -24,16 +24,18 @@ export default function DraftBoard() {
     draft.step === "support" ? "僚機を選択" :
     `パーツを選択 (${draft.partsPickCount}/8)`;
   const hoverPart = draft.availableParts.find((p) => p.id === hoverPartId) ?? null;
+  const selectedPart = draft.availableParts.find((p) => p.id === selectedPartId) ?? null;
+  const previewPart = hoverPart ?? selectedPart;
 
   function simulateStats(mech: { baseStats: { sp: number; hp: number; aim: number; dice: number; reroll: number } }) {
-    if (!hoverPart) return null;
+    if (!previewPart) return null;
     const b = mech.baseStats;
     return {
-      sp: b.sp + hoverPart.spMod,
-      hp: b.hp + hoverPart.hpMod,
-      aim: b.aim + hoverPart.aimMod,
-      dice: b.dice + hoverPart.bonusDice,
-      reroll: b.reroll + hoverPart.bonusReroll,
+      sp: b.sp + previewPart.spMod,
+      hp: b.hp + previewPart.hpMod,
+      aim: b.aim + previewPart.aimMod,
+      dice: b.dice + previewPart.bonusDice,
+      reroll: b.reroll + previewPart.bonusReroll,
     };
   }
 
@@ -77,22 +79,21 @@ export default function DraftBoard() {
               <div key={part.id} onMouseEnter={() => setHoverPartId(part.id)} onMouseLeave={() => setHoverPartId(null)}>
                 <PartCardUI
                   part={part}
-                  onClick={() => setSelectedPartId(part.id)}
+                  onClick={() => {
+                    setSelectedPartId(part.id);
+                    if (myTurn) {
+                      pick(part.id);
+                    }
+                  }}
                   disabled={!myTurn}
                   selected={selectedPartId === part.id}
                 />
               </div>
             ))}
           </div>
-          {myTurn && selectedPartId && (
-            <div className="mt-3 rounded-lg border border-blue-500/60 bg-slate-900/90 p-3 flex items-center justify-between">
-              <div className="text-sm text-blue-100">選択中: {draft.availableParts.find((p) => p.id === selectedPartId)?.name}</div>
-              <button className="btn-success" onClick={() => pick(selectedPartId)}>この武器を確定</button>
-            </div>
-          )}
-          {hoverPart && me && me.selectedMechs.length > 0 && (
+          {previewPart && me && me.selectedMechs.length > 0 && (
             <div className="mt-3 text-sm text-gray-200 rounded-lg border border-cyan-500/40 bg-slate-950/80 p-3">
-              <span className="text-cyan-300 font-bold">装着シミュレーション: {hoverPart.name}</span>
+              <span className="text-cyan-300 font-bold">装着シミュレーション: {previewPart.name}</span>
               <div className="flex flex-wrap gap-3 mt-2">
                 {me.selectedMechs.map((m) => {
                   const s = simulateStats(m);
