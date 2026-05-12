@@ -30,7 +30,7 @@ export default function MechStatus({ mech, isAttacker, isDefender, onClick, disa
 
   return (
     <div
-      className={`card-base flex flex-col gap-2 w-44 transition-all ${borderClass} ${isDestroyed ? "opacity-40" : ""}`}
+      className={`card-base flex flex-col gap-1.5 sm:gap-2 w-[47%] min-w-[150px] sm:w-44 transition-all ${borderClass} ${isDestroyed ? "opacity-40" : ""}`}
       onClick={!disabled && onClick ? onClick : undefined}
     >
       <div className="flex items-center justify-between">
@@ -47,7 +47,7 @@ export default function MechStatus({ mech, isAttacker, isDefender, onClick, disa
         backpackPart={mech.parts.backpack}
         isDestroyed={isDestroyed}
         isHighlighted={isAttacker || isDefender}
-        size={80}
+        size={68}
       />
 
       {/* HP bar */}
