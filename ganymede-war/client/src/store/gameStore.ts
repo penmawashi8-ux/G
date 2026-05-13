@@ -10,12 +10,14 @@ interface GameStore {
   playerId: string | null;
   playerName: string;
   gameState: GameState | null;
+  isConnected: boolean;
 
   setSocket: (s: AppSocket) => void;
   setRoomCode: (code: string) => void;
   setPlayerId: (id: string) => void;
   setPlayerName: (name: string) => void;
   setGameState: (state: GameState) => void;
+  setConnected: (connected: boolean) => void;
   reset: () => void;
 }
 
@@ -25,11 +27,13 @@ export const useGameStore = create<GameStore>((set) => ({
   playerId: null,
   playerName: "",
   gameState: null,
+  isConnected: false,
 
   setSocket: (s) => set({ socket: s }),
   setRoomCode: (code) => set({ roomCode: code }),
   setPlayerId: (id) => set({ playerId: id }),
   setPlayerName: (name) => set({ playerName: name }),
   setGameState: (state) => set({ gameState: state }),
+  setConnected: (connected) => set({ isConnected: connected }),
   reset: () => set({ roomCode: null, playerId: null, gameState: null }),
 }));
