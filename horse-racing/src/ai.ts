@@ -57,14 +57,22 @@ function buildAction(state: GameState, cpuIdx: number): GameAction | null {
 
 // ── Scoring helpers ───────────────────────────────────────────────────────────
 
+function expectedAdvancePerTurn(speed: number): number {
+  // E[advance] = P(die >= speed) * speed = max(0, 7 - speed) / 6 * speed
+  return Math.max(0, (7 - speed) / 6) * speed;
+}
+
 function horseScore(h: BaseHorse) {
-  // Lower speed = easier to succeed (more actions); higher hp = more survivable
-  return (5 - h.speed) * 2 + h.hp;
+  // Maximize expected advance (peaks at speed 3-4) and survivability
+  return expectedAdvancePerTurn(h.speed) * 2 + h.hp;
 }
 
 function partScore(p: Part) {
-  // Negative speedMod lowers the threshold (good); positive hpMod increases survivability (good)
-  return -p.speedMod * 1.5 + p.hpMod;
+  // Evaluate speedMod by its average effect on expected advance across typical base speeds (2-5)
+  const avgSpeedDelta = [2, 3, 4, 5].reduce((sum, base) => {
+    return sum + (expectedAdvancePerTurn(base + p.speedMod) - expectedAdvancePerTurn(base));
+  }, 0) / 4;
+  return avgSpeedDelta * 2 + p.hpMod;
 }
 
 // ── Equip phase ───────────────────────────────────────────────────────────────
@@ -100,7 +108,7 @@ function raceAction(state: GameState, cpuIdx: number): GameAction | null {
     // Attack if an opponent can be finished off
     const opponents = state.players.filter((_, i) => i !== cpuIdx);
     const canFinish = opponents.some(p =>
-      p.horses.some(h => !h.fallen && getEffectiveStats(h).hp - h.damage <= 1)
+      p.horses.some(h => !h.fallen && getEffectiveStats(h).hp - h.damage <= 0)
     );
     if (canFinish) return { type: 'DECLARE_ACTION', actionType: 'obstruct' };
 

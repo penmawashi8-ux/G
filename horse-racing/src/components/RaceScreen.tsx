@@ -285,7 +285,7 @@ export default function RaceScreen({ state, dispatch }: Props) {
                               {['','⚀','⚁','⚂','⚃','⚄','⚅'][die]}
                             </div>
                             <div className="text-sm text-gray-600 leading-relaxed">
-                              <p className="font-medium">{die} &gt; {attackerStats.speed} →{' '}
+                              <p className="font-medium">{die} {success ? '≥' : '<'} {attackerStats.speed} →{' '}
                                 <span className={`font-bold ${success ? 'text-emerald-700' : 'text-red-600'}`}>
                                   {success ? '成功！' : '失敗…'}
                                 </span>
@@ -296,7 +296,7 @@ export default function RaceScreen({ state, dispatch }: Props) {
                           {isAdvance ? (
                             <div className="text-center">
                               <p className={`font-black text-3xl ${success ? 'text-emerald-700' : 'text-gray-400'}`}>
-                                {success ? `+${die} マス！` : '前進なし'}
+                                {success ? `+${attackerStats.speed} マス！` : '前進なし'}
                               </p>
                               <p className="text-xs text-gray-500 mt-1">{attackerHorse.position} / {state.raceDistance} マス</p>
                             </div>

@@ -26,15 +26,15 @@ export function getEffectiveStats(horse: HorseState): EffectiveStats {
   };
 }
 
-/** Returns true when the die result beats the speed threshold (die > speed). */
+/** Returns true when the die result meets the speed threshold (die >= speed). */
 export function isDiceSuccess(dieValue: number, speed: number): boolean {
-  return dieValue > speed;
+  return dieValue >= speed;
 }
 
 export function isEquipValid(horse: HorseState, slot: keyof Pick<HorseState, 'jockey' | 'blinker' | 'cheek'>, part: Part | undefined): boolean {
   const testHorse: HorseState = { ...horse, [slot]: part };
   const stats = getEffectiveStats(testHorse);
-  return stats.speed >= 1 && stats.hp >= 1;
+  return stats.speed >= 1 && stats.speed <= 6 && stats.hp >= 1;
 }
 
 export function buildInitiativeDeck(players: Player[]): InitiativeCard[] {

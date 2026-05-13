@@ -533,7 +533,7 @@ export function gameReducer(state: GameState, action: GameAction): GameState {
       const success = isDiceSuccess(die, stats.speed);
 
       if (state.declaredAction === 'advance') {
-        const advance = success ? die : 0;
+        const advance = success ? stats.speed : 0;
         const newPos = attackerHorse.position + advance;
         const newPlayers = state.players.map((p, pi) => {
           if (pi !== state.attackerPlayerIndex) return p;
@@ -545,8 +545,8 @@ export function gameReducer(state: GameState, action: GameAction): GameState {
           };
         });
         const log = success
-          ? `→ 出目${die} > スピード${stats.speed} 成功！ ${die}マス前進 → 位置${newPos}`
-          : `→ 出目${die} ≤ スピード${stats.speed} 失敗… 前進できず`;
+          ? `→ 出目${die} ≥ スピード${stats.speed} 成功！ ${stats.speed}マス前進 → 位置${newPos}`
+          : `→ 出目${die} < スピード${stats.speed} 失敗… 前進できず`;
         let s = addLog({ ...state, players: newPlayers, raceSubPhase: 'resolve' }, log);
         s = checkVictory(s);
         if (s.phase === 'game-over') return s;
@@ -571,8 +571,8 @@ export function gameReducer(state: GameState, action: GameAction): GameState {
         });
 
         const log = success
-          ? `→ 出目${die} > スピード${stats.speed} 成功！ ${defHorse.base.name}に1ダメージ（体力: ${defHorse.damage}+1=${newDamage}/${defStats.hp}）`
-          : `→ 出目${die} ≤ スピード${stats.speed} 失敗… ダメージなし`;
+          ? `→ 出目${die} ≥ スピード${stats.speed} 成功！ ${defHorse.base.name}に1ダメージ（体力: ${defHorse.damage}+1=${newDamage}/${defStats.hp}）`
+          : `→ 出目${die} < スピード${stats.speed} 失敗… ダメージなし`;
 
         let s = addLog({ ...state, players: newPlayers, raceSubPhase: 'resolve' }, log);
 
