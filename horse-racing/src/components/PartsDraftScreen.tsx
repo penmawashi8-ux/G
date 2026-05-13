@@ -10,7 +10,6 @@ interface Props {
   myTurn?: boolean;
 }
 
-const SLOT_ICON: Record<string, string> = { jockey: '🏇', blinker: '👁', cheek: '🔷' };
 const SLOT_COLOR: Record<string, string> = {
   jockey: 'bg-amber-50 border-amber-200 text-amber-800',
   blinker: 'bg-sky-50 border-sky-200 text-sky-800',
@@ -23,7 +22,7 @@ function PartCard({ part, onClick, selected }: { part: Part; onClick?: () => voi
     part.speedMod !== 0 && `速${part.speedMod > 0 ? '+' : ''}${part.speedMod}`,
     part.motivationMod !== 0 && `気${part.motivationMod > 0 ? '+' : ''}${part.motivationMod}`,
     part.gritMod !== 0 && `根${part.gritMod > 0 ? '+' : ''}${part.gritMod}`,
-    part.extraDice > 0 && `🎲+${part.extraDice}`,
+    part.extraDice > 0 && `サイコロ+${part.extraDice}`,
     part.extraReroll > 0 && `↺+${part.extraReroll}`,
   ].filter(Boolean) as string[];
 
@@ -38,7 +37,6 @@ function PartCard({ part, onClick, selected }: { part: Part; onClick?: () => voi
       `}
     >
       <div className="flex items-start gap-2 mb-2">
-        <span className="text-lg">{SLOT_ICON[part.slot]}</span>
         <div className="flex-1 min-w-0">
           <p className="font-bold text-sm leading-tight">{part.name}</p>
           <span className={`text-xs px-1.5 py-0.5 rounded border font-medium ${SLOT_COLOR[part.slot]}`}>
@@ -49,7 +47,7 @@ function PartCard({ part, onClick, selected }: { part: Part; onClick?: () => voi
       <div className="flex flex-wrap gap-1">
         {mods.map((m, i) => (
           <span key={i} className={`text-xs px-1.5 py-0.5 rounded font-medium ${
-            m.includes('+') ? 'bg-green-100 text-green-700' : m.startsWith('🎲') || m.startsWith('↺') ? 'bg-blue-100 text-blue-700' : 'bg-red-100 text-red-700'
+            m.includes('+') ? 'bg-green-100 text-green-700' : m.startsWith('サイコロ') || m.startsWith('↺') ? 'bg-blue-100 text-blue-700' : 'bg-red-100 text-red-700'
           }`}>
             {m}
           </span>
@@ -72,7 +70,6 @@ export default function PartsDraftScreen({ state, dispatch, myTurn = true }: Pro
         {/* Header */}
         <div className="text-center mb-4">
           <div className="inline-flex items-center gap-3 bg-white/10 rounded-full px-6 py-2">
-            <span className="text-xl">🔧</span>
             <h1 className="text-lg font-bold text-white">パーツドラフト — {phaseLabel}</h1>
           </div>
         </div>
