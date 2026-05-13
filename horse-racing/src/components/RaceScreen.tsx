@@ -152,7 +152,6 @@ export default function RaceScreen({ state, dispatch }: Props) {
             {/* Draw initiative */}
             {sub === 'draw-initiative' && (
               <div className="text-center py-4">
-                <p className="text-gray-500 text-sm mb-4">イニシアチブカードを引いて手番プレイヤーを決定します</p>
                 <button
                   onClick={() => dispatch({ type: 'DRAW_INITIATIVE' })}
                   className="px-8 py-4 bg-emerald-600 hover:bg-emerald-700 text-white font-bold text-xl rounded-xl shadow-lg transition-all hover:scale-105 active:scale-95"
@@ -163,215 +162,169 @@ export default function RaceScreen({ state, dispatch }: Props) {
             )}
 
             {/* Initiative card shown */}
-            {(sub === 'action-declare' || sub === 'target-declare' || sub === 'dice-roll' || sub === 'resolve') && state.currentInitiativeCard && attacker && attackerHorse && attackerStats && (
-              <>
-                {/* Current turn banner */}
-                <div className={`flex items-center gap-3 mb-4 p-3 rounded-xl ${['bg-rose-50','bg-emerald-50','bg-slate-50','bg-violet-50'][state.attackerPlayerIndex!]}`}>
-                  <div className={`w-12 h-16 rounded-lg border-2 ${COLOR_CLASS[attacker.color]} flex flex-col items-center justify-center shadow flex-shrink-0`}>
-                    <span className="text-white text-xs font-bold">{COLOR_LABEL[attacker.color]}</span>
-                    <span className="text-white text-xl">{state.currentInitiativeCard.direction === 'right' ? '→' : '←'}</span>
-                  </div>
-                  <div className="flex-1 min-w-0">
-                    <p className="text-[11px] text-gray-400 font-medium">手番プレイヤー</p>
-                    <p className={`font-bold text-lg ${PLAYER_TEXT_COLORS[state.attackerPlayerIndex!]}`}>{attacker.name}</p>
-                    <p className="text-sm text-gray-700 font-medium">🏇 {attackerHorse.base.name}</p>
-                    <div className="flex gap-2 mt-1 text-xs">
-                      <span className="bg-blue-100 text-blue-800 px-2 py-0.5 rounded-full font-medium">
-                        スピード {attackerStats.speed}
-                        <span className="font-normal text-blue-600 ml-1">成功率{Math.round((6 - attackerStats.speed) / 6 * 100)}%</span>
-                      </span>
-                      <span className="bg-red-100 text-red-800 px-2 py-0.5 rounded-full font-medium">
-                        体力 {attackerStats.hp - attackerHorse.damage}/{attackerStats.hp}
-                      </span>
-                    </div>
-                  </div>
-                  {defender && sub !== 'action-declare' && (
-                    <div className="text-right flex-shrink-0">
-                      <p className="text-[11px] text-gray-400">{DIR_LABEL[state.currentInitiativeCard.direction]}</p>
-                      <p className={`font-bold text-sm ${PLAYER_TEXT_COLORS[state.defenderPlayerIndex!]}`}>{defender.name}</p>
-                      {defenderHorse && <p className="text-xs text-gray-500">{defenderHorse.base.name}</p>}
-                    </div>
-                  )}
-                </div>
+            {(sub === 'action-declare' || sub === 'target-declare' || sub === 'dice-roll' || sub === 'resolve') && state.currentInitiativeCard && attacker && attackerHorse && attackerStats && (() => {
+              const isAttackerCpu = state.playerTypes[state.attackerPlayerIndex!] === 'cpu';
+              const isDefenderCpu = state.defenderPlayerIndex != null && state.playerTypes[state.defenderPlayerIndex] === 'cpu';
 
-                {/* Action declare */}
-                {sub === 'action-declare' && (
-                  <div>
-                    <p className="text-center text-gray-600 font-medium mb-3 text-sm">
-                      {attacker.name} — どちらの行動をしますか？
-                    </p>
-                    <div className="grid grid-cols-2 gap-3">
-                      <button
-                        onClick={() => dispatch({ type: 'DECLARE_ACTION', actionType: 'advance' })}
-                        className="p-4 bg-emerald-50 border-2 border-emerald-400 rounded-xl hover:bg-emerald-100 transition-all hover:scale-105 text-center"
-                      >
-                        <div className="font-bold text-emerald-700 text-lg">🏃 前進</div>
-                        <div className="text-xs text-gray-600 mt-2 leading-relaxed">
-                          成功したら<br /><span className="font-bold text-emerald-700">出目の数だけ</span>進む
-                        </div>
-                        <div className="text-[11px] text-gray-400 mt-1">
-                          成功率 {Math.round((6 - attackerStats.speed) / 6 * 100)}%
-                        </div>
-                      </button>
-                      <button
-                        onClick={() => dispatch({ type: 'DECLARE_ACTION', actionType: 'obstruct' })}
-                        className="p-4 bg-red-50 border-2 border-red-400 rounded-xl hover:bg-red-100 transition-all hover:scale-105 text-center"
-                      >
-                        <div className="font-bold text-red-700 text-lg">⚔️ 斜行</div>
-                        <div className="text-xs text-gray-600 mt-2 leading-relaxed">
-                          成功したら相手の<br /><span className="font-bold text-red-600">体力に1ダメージ</span>
-                        </div>
-                        <div className="text-[11px] text-gray-400 mt-1">
-                          {DIR_LABEL[state.currentInitiativeCard.direction]}のプレイヤーが対象
-                        </div>
-                      </button>
+              return (
+                <>
+                  {/* Current turn banner */}
+                  <div className={`flex items-center gap-3 mb-4 p-3 rounded-xl ${['bg-rose-50','bg-emerald-50','bg-slate-50','bg-violet-50'][state.attackerPlayerIndex!]}`}>
+                    <div className={`w-10 h-10 rounded-lg border-2 ${COLOR_CLASS[attacker.color]} flex items-center justify-center shadow flex-shrink-0`}>
+                      <span className="text-white font-bold text-sm">{state.currentInitiativeCard.direction === 'right' ? '→' : '←'}</span>
                     </div>
-                  </div>
-                )}
-
-                {/* Target declare */}
-                {sub === 'target-declare' && defender && (
-                  <div>
-                    <div className="bg-red-50 border border-red-200 rounded-lg px-3 py-2 mb-3 text-center">
-                      <p className="text-red-700 font-medium text-sm">
-                        ⚔️ <span className={`font-bold ${PLAYER_TEXT_COLORS[state.attackerPlayerIndex!]}`}>{attacker.name}</span> の斜行！
+                    <div className="flex-1 min-w-0">
+                      <p className={`font-bold text-base leading-tight ${PLAYER_TEXT_COLORS[state.attackerPlayerIndex!]}`}>
+                        {attacker.name} <span className="text-gray-500 font-normal text-sm">/ {attackerHorse.base.name}</span>
                       </p>
-                      <p className="text-gray-600 text-xs mt-0.5">
-                        {defender.name} — どの馬でダメージを受けますか？
-                      </p>
-                    </div>
-                    <div className="grid grid-cols-2 gap-3">
-                      {defender.horses.map((h, hi) => {
-                        if (h.fallen) return null;
-                        const stats = getEffectiveStats(h);
-                        const hpRemaining = stats.hp - h.damage;
-                        const hpPercent = stats.hp > 0 ? (hpRemaining / stats.hp) * 100 : 0;
-                        return (
-                          <button
-                            key={hi}
-                            onClick={() => dispatch({ type: 'SELECT_DEFENDER_HORSE', horseIndex: hi })}
-                            className="p-3 bg-gray-50 border-2 border-gray-300 rounded-xl hover:border-red-400 hover:bg-red-50 transition-all text-left"
-                          >
-                            <p className="font-bold text-gray-800 text-sm">{h.base.name}</p>
-                            <div className="flex items-center gap-2 mt-1.5">
-                              <span className="text-xs text-gray-500">体力</span>
-                              <div className="flex-1 bg-gray-200 rounded-full h-1.5">
-                                <div
-                                  className={`h-1.5 rounded-full ${hpPercent <= 33 ? 'bg-red-400' : hpPercent <= 66 ? 'bg-yellow-400' : 'bg-emerald-400'}`}
-                                  style={{ width: `${hpPercent}%` }}
-                                />
-                              </div>
-                              <span className="text-xs font-bold text-gray-700">{hpRemaining}/{stats.hp}</span>
-                            </div>
-                          </button>
-                        );
-                      })}
-                    </div>
-                  </div>
-                )}
-
-                {/* Dice roll */}
-                {sub === 'dice-roll' && state.diceValues.length > 0 && (
-                  <DiceRoller
-                    dieValue={state.diceValues[0]}
-                    speed={attackerStats.speed}
-                    action={state.declaredAction as 'advance' | 'obstruct'}
-                    onConfirm={() => dispatch({ type: 'CONFIRM_DICE' })}
-                  />
-                )}
-
-                {/* Resolve */}
-                {sub === 'resolve' && state.diceValues.length > 0 && (() => {
-                  const die = state.diceValues[0];
-                  const success = isDiceSuccess(die, attackerStats.speed);
-                  const isAdvance = state.declaredAction === 'advance';
-
-                  return (
-                    <div>
-                      <div className={`rounded-xl p-4 mb-3 border-2 ${isAdvance ? 'bg-emerald-50 border-emerald-300' : 'bg-red-50 border-red-300'}`}>
-                        {/* Header */}
-                        <div className="flex items-center gap-2 mb-3 pb-3 border-b border-gray-200">
-                          <span className="text-2xl">{isAdvance ? '🏃' : '⚔️'}</span>
-                          <div>
-                            <p className="font-bold text-gray-800">
-                              {attacker.name} / {attackerHorse.base.name}
-                            </p>
-                            {isAdvance ? (
-                              <p className="text-emerald-700 text-sm font-semibold">前進アクション</p>
-                            ) : (
-                              <p className="text-red-700 text-sm font-semibold">
-                                斜行 → {defender?.name} / {defenderHorse?.base.name}
-                              </p>
-                            )}
-                          </div>
-                        </div>
-
-                        {/* Die result */}
-                        <div className="flex items-center justify-center gap-4 mb-3">
-                          <div className={`w-14 h-14 rounded-xl border-3 flex items-center justify-center text-4xl
-                            ${success ? 'border-emerald-400 bg-emerald-100' : 'border-red-300 bg-red-100'}`}>
-                            {['','⚀','⚁','⚂','⚃','⚄','⚅'][die]}
-                          </div>
-                          <div className="text-sm text-gray-600">
-                            <p>出目 <span className="font-black text-xl text-gray-900">{die}</span> vs スピード <span className="font-bold">{attackerStats.speed}</span></p>
-                            <p className={`font-bold ${success ? 'text-emerald-700' : 'text-red-600'}`}>
-                              {success ? '✓ 成功！' : '✗ 失敗…'}
-                            </p>
-                          </div>
-                        </div>
-
-                        {/* Outcome */}
-                        {isAdvance ? (
-                          <div className="text-center">
-                            <p className={`font-black text-3xl ${success ? 'text-emerald-700' : 'text-gray-400'}`}>
-                              {success ? `+${die} マス！` : '前進なし'}
-                            </p>
-                            <p className="text-sm text-gray-600 mt-1">
-                              現在位置: <span className="font-bold">{attackerHorse.position}</span> / {state.raceDistance}
-                            </p>
-                          </div>
-                        ) : (
-                          <div className="text-center">
-                            <p className={`font-black text-3xl ${success ? 'text-red-600' : 'text-gray-400'}`}>
-                              {success ? '-1 ダメージ！' : 'ダメージなし'}
-                            </p>
-                            {success && defenderHorse && defenderStats && (
-                              <div className="mt-2 bg-white/60 rounded-lg p-2">
-                                <p className="text-sm text-gray-700 font-medium">{defenderHorse.base.name} の体力</p>
-                                <div className="flex items-center justify-center gap-2 mt-1">
-                                  <span className="text-gray-500 font-bold">{defenderHorse.damage - 1}</span>
-                                  <span className="text-gray-400">→</span>
-                                  <span className={`font-black text-lg ${defenderHorse.damage >= defenderStats.hp ? 'text-red-700' : 'text-gray-800'}`}>
-                                    {defenderHorse.damage}
-                                  </span>
-                                  <span className="text-gray-400 text-sm">/ {defenderStats.hp}</span>
-                                </div>
-                                <div className="w-full bg-gray-200 rounded-full h-2 mt-1.5">
-                                  <div
-                                    className={`h-2 rounded-full transition-all ${
-                                      (defenderHorse.damage / defenderStats.hp) >= 0.75 ? 'bg-red-500' :
-                                      (defenderHorse.damage / defenderStats.hp) >= 0.5 ? 'bg-yellow-500' : 'bg-emerald-500'
-                                    }`}
-                                    style={{ width: `${Math.max(0, 100 - (defenderHorse.damage / defenderStats.hp) * 100)}%` }}
-                                  />
-                                </div>
-                              </div>
-                            )}
-                          </div>
-                        )}
+                      <div className="flex gap-1.5 mt-1">
+                        <span className="bg-blue-100 text-blue-800 px-2 py-0.5 rounded-full text-xs font-medium">SPD {attackerStats.speed}</span>
+                        <span className="bg-red-100 text-red-800 px-2 py-0.5 rounded-full text-xs font-medium">❤️ {attackerStats.hp - attackerHorse.damage}/{attackerStats.hp}</span>
                       </div>
-
-                      <button
-                        onClick={() => dispatch({ type: 'DRAW_INITIATIVE' })}
-                        className="w-full py-3 bg-emerald-600 hover:bg-emerald-700 text-white font-bold rounded-xl transition-all hover:scale-105 active:scale-95"
-                      >
-                        次のターンへ →
-                      </button>
                     </div>
-                  );
-                })()}
-              </>
-            )}
+                    {defender && sub !== 'action-declare' && (
+                      <div className="text-right flex-shrink-0">
+                        <p className={`font-bold text-sm ${PLAYER_TEXT_COLORS[state.defenderPlayerIndex!]}`}>{defender.name}</p>
+                        {defenderHorse && <p className="text-xs text-gray-500">{defenderHorse.base.name}</p>}
+                      </div>
+                    )}
+                  </div>
+
+                  {/* Action declare */}
+                  {sub === 'action-declare' && (
+                    isAttackerCpu ? (
+                      <div className="text-center py-4 text-gray-400 text-sm animate-pulse">CPU 思考中…</div>
+                    ) : (
+                      <div className="grid grid-cols-2 gap-3">
+                        <button
+                          onClick={() => dispatch({ type: 'DECLARE_ACTION', actionType: 'advance' })}
+                          className="p-4 bg-emerald-50 border-2 border-emerald-400 rounded-xl hover:bg-emerald-100 transition-all active:scale-95 text-center"
+                        >
+                          <div className="text-2xl mb-1">🏃</div>
+                          <div className="font-bold text-emerald-700">前進</div>
+                          <div className="text-xs text-gray-500 mt-1">出目マス進む</div>
+                        </button>
+                        <button
+                          onClick={() => dispatch({ type: 'DECLARE_ACTION', actionType: 'obstruct' })}
+                          className="p-4 bg-red-50 border-2 border-red-400 rounded-xl hover:bg-red-100 transition-all active:scale-95 text-center"
+                        >
+                          <div className="text-2xl mb-1">⚔️</div>
+                          <div className="font-bold text-red-700">斜行</div>
+                          <div className="text-xs text-gray-500 mt-1">相手の体力−1</div>
+                        </button>
+                      </div>
+                    )
+                  )}
+
+                  {/* Target declare */}
+                  {sub === 'target-declare' && defender && (
+                    isDefenderCpu ? (
+                      <div className="text-center py-4 text-gray-400 text-sm animate-pulse">CPU 思考中…</div>
+                    ) : (
+                      <div>
+                        <p className="text-center text-red-700 font-medium text-sm mb-3">
+                          ⚔️ {attacker.name} の斜行！どの馬で受けますか？
+                        </p>
+                        <div className="grid grid-cols-2 gap-3">
+                          {defender.horses.map((h, hi) => {
+                            if (h.fallen) return null;
+                            const stats = getEffectiveStats(h);
+                            const hpRemaining = stats.hp - h.damage;
+                            const hpPercent = stats.hp > 0 ? (hpRemaining / stats.hp) * 100 : 0;
+                            return (
+                              <button
+                                key={hi}
+                                onClick={() => dispatch({ type: 'SELECT_DEFENDER_HORSE', horseIndex: hi })}
+                                className="p-3 bg-gray-50 border-2 border-gray-300 rounded-xl hover:border-red-400 hover:bg-red-50 transition-all text-left"
+                              >
+                                <p className="font-bold text-gray-800 text-sm">{h.base.name}</p>
+                                <div className="flex items-center gap-2 mt-1.5">
+                                  <div className="flex-1 bg-gray-200 rounded-full h-1.5">
+                                    <div
+                                      className={`h-1.5 rounded-full ${hpPercent <= 33 ? 'bg-red-400' : hpPercent <= 66 ? 'bg-yellow-400' : 'bg-emerald-400'}`}
+                                      style={{ width: `${hpPercent}%` }}
+                                    />
+                                  </div>
+                                  <span className="text-xs font-bold text-gray-700">{hpRemaining}/{stats.hp}</span>
+                                </div>
+                              </button>
+                            );
+                          })}
+                        </div>
+                      </div>
+                    )
+                  )}
+
+                  {/* Dice roll */}
+                  {sub === 'dice-roll' && state.diceValues.length > 0 && (
+                    isAttackerCpu ? (
+                      <div className="text-center py-4 text-gray-400 text-sm animate-pulse">CPU 思考中…</div>
+                    ) : (
+                      <DiceRoller
+                        dieValue={state.diceValues[0]}
+                        speed={attackerStats.speed}
+                        action={state.declaredAction as 'advance' | 'obstruct'}
+                        onConfirm={() => dispatch({ type: 'CONFIRM_DICE' })}
+                      />
+                    )
+                  )}
+
+                  {/* Resolve */}
+                  {sub === 'resolve' && state.diceValues.length > 0 && (() => {
+                    const die = state.diceValues[0];
+                    const success = isDiceSuccess(die, attackerStats.speed);
+                    const isAdvance = state.declaredAction === 'advance';
+
+                    return (
+                      <div>
+                        <div className={`rounded-xl p-4 mb-3 border-2 ${isAdvance ? 'bg-emerald-50 border-emerald-300' : 'bg-red-50 border-red-300'}`}>
+                          {/* Die + result */}
+                          <div className="flex items-center justify-center gap-4 mb-3">
+                            <div className={`w-14 h-14 rounded-xl flex items-center justify-center text-4xl border-2
+                              ${success ? 'border-emerald-400 bg-emerald-100' : 'border-red-300 bg-red-100'}`}>
+                              {['','⚀','⚁','⚂','⚃','⚄','⚅'][die]}
+                            </div>
+                            <div className="text-sm text-gray-600 leading-relaxed">
+                              <p className="font-medium">{die} &gt; {attackerStats.speed} →{' '}
+                                <span className={`font-bold ${success ? 'text-emerald-700' : 'text-red-600'}`}>
+                                  {success ? '成功！' : '失敗…'}
+                                </span>
+                              </p>
+                            </div>
+                          </div>
+                          {/* Outcome */}
+                          {isAdvance ? (
+                            <div className="text-center">
+                              <p className={`font-black text-3xl ${success ? 'text-emerald-700' : 'text-gray-400'}`}>
+                                {success ? `+${die} マス！` : '前進なし'}
+                              </p>
+                              <p className="text-xs text-gray-500 mt-1">{attackerHorse.position} / {state.raceDistance} マス</p>
+                            </div>
+                          ) : (
+                            <div className="text-center">
+                              <p className={`font-black text-3xl ${success ? 'text-red-600' : 'text-gray-400'}`}>
+                                {success ? '−1 ダメージ！' : 'ダメージなし'}
+                              </p>
+                              {success && defenderHorse && defenderStats && (
+                                <p className="text-xs text-gray-500 mt-1">
+                                  {defenderHorse.base.name}: ❤️ {Math.max(0, defenderStats.hp - defenderHorse.damage)} / {defenderStats.hp}
+                                </p>
+                              )}
+                            </div>
+                          )}
+                        </div>
+                        <button
+                          onClick={() => dispatch({ type: 'DRAW_INITIATIVE' })}
+                          className="w-full py-3 bg-emerald-600 hover:bg-emerald-700 text-white font-bold rounded-xl transition-all active:scale-95"
+                        >
+                          次のターンへ →
+                        </button>
+                      </div>
+                    );
+                  })()}
+                </>
+              );
+            })()}
           </div>
         )}
 
