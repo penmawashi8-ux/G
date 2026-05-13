@@ -2,6 +2,7 @@ import { useGameStore } from "../../store/gameStore";
 import { useState } from "react";
 import MechCard from "../mech/MechCard";
 import PartCardUI from "./PartCardUI";
+import { PartCard, MechCard as MechCardType } from "@shared/types";
 
 export default function DraftBoard() {
   const { gameState, playerId, socket } = useGameStore();
@@ -28,6 +29,8 @@ export default function DraftBoard() {
   const selectedPart = allPreviewableParts.find((p) => p.id === selectedPartId) ?? null;
   const previewPart = hoverPart ?? selectedPart;
   const isSelectedInAvailable = draft.availableParts.some((p) => p.id === selectedPartId);
+  const activePreviewId = hoverPartId ?? selectedPartId;
+  const isPreviewFromHand = !!(activePreviewId && me?.hand.some((p) => p.id === activePreviewId));
 
   function simulateStats(mech: { baseStats: { sp: number; hp: number; aim: number; dice: number; reroll: number } }) {
     if (!previewPart) return null;
@@ -97,33 +100,16 @@ export default function DraftBoard() {
         </div>
       )}
 
-      {/* Simulation panel - shown whenever a part is previewed during parts step */}
-      {draft.step === "parts" && previewPart && me && me.selectedMechs.length > 0 && (
-        <div className="text-sm text-gray-200 rounded-lg border border-cyan-500/40 bg-slate-950/80 p-3">
-          <div className="flex items-center justify-between flex-wrap gap-2 mb-2">
-            <span className="text-cyan-300 font-bold">装着シミュレーション: {previewPart.name}</span>
-            {myTurn && isSelectedInAvailable && selectedPartId && (
-              <button className="btn-primary text-xs px-3 py-1" onClick={() => pick(selectedPartId)}>
-                このパーツを選択
-              </button>
-            )}
-          </div>
-          {!myTurn && isSelectedInAvailable && selectedPartId && (
-            <p className="text-xs text-gray-500 mb-1">（相手のターン中 — 選択はできません）</p>
-          )}
-          <div className="flex flex-wrap gap-3">
-            {me.selectedMechs.map((m) => {
-              const s = simulateStats(m);
-              if (!s) return null;
-              return (
-                <div key={m.id} className="px-3 py-2 rounded border border-cyan-600/40 bg-slate-900">
-                  <span className="text-white font-semibold">{m.name}</span>
-                  <span className="ml-2 text-cyan-100">SP {s.sp} / HP {s.hp} / AIM {s.aim} / 🎲 {s.dice} / ↩ {s.reroll}</span>
-                </div>
-              );
-            })}
-          </div>
-        </div>
+      {/* Simulation panel for AVAILABLE parts — above 取得済み, no layout shift when tapping hand parts */}
+      {draft.step === "parts" && previewPart && !isPreviewFromHand && me && me.selectedMechs.length > 0 && (
+        <SimulationPanel
+          part={previewPart}
+          mechs={me.selectedMechs}
+          simulateStats={simulateStats}
+          showPickButton={myTurn && isSelectedInAvailable && !!selectedPartId}
+          showNotMyTurn={!myTurn && isSelectedInAvailable && !!selectedPartId}
+          onPick={() => selectedPartId && pick(selectedPartId)}
+        />
       )}
 
       {/* My collection */}
@@ -147,6 +133,18 @@ export default function DraftBoard() {
         </div>
       )}
 
+      {/* Simulation panel for HAND parts — below 取得済み so tapping hand parts never causes layout shift above */}
+      {draft.step === "parts" && previewPart && isPreviewFromHand && me && me.selectedMechs.length > 0 && (
+        <SimulationPanel
+          part={previewPart}
+          mechs={me.selectedMechs}
+          simulateStats={simulateStats}
+          showPickButton={false}
+          showNotMyTurn={false}
+          onPick={() => {}}
+        />
+      )}
+
       {/* Other players */}
       {gameState.players.filter((p) => p.id !== playerId).map((opponent) => (
         <div key={opponent.id} className="border-t border-gray-800 pt-3">
@@ -159,6 +157,45 @@ export default function DraftBoard() {
           </div>
         </div>
       ))}
+    </div>
+  );
+}
+
+interface SimPanelProps {
+  part: PartCard;
+  mechs: MechCardType[];
+  simulateStats: (mech: { baseStats: { sp: number; hp: number; aim: number; dice: number; reroll: number } }) => { sp: number; hp: number; aim: number; dice: number; reroll: number } | null;
+  showPickButton: boolean;
+  showNotMyTurn: boolean;
+  onPick: () => void;
+}
+
+function SimulationPanel({ part, mechs, simulateStats, showPickButton, showNotMyTurn, onPick }: SimPanelProps) {
+  return (
+    <div className="text-sm text-gray-200 rounded-lg border border-cyan-500/40 bg-slate-950/80 p-3">
+      <div className="flex items-center justify-between flex-wrap gap-2 mb-2">
+        <span className="text-cyan-300 font-bold">装着シミュレーション: {part.name}</span>
+        {showPickButton && (
+          <button className="btn-primary text-xs px-3 py-1" onClick={onPick}>
+            このパーツを選択
+          </button>
+        )}
+      </div>
+      {showNotMyTurn && (
+        <p className="text-xs text-gray-500 mb-1">（相手のターン中 — 選択はできません）</p>
+      )}
+      <div className="flex flex-wrap gap-3">
+        {mechs.map((m) => {
+          const s = simulateStats(m);
+          if (!s) return null;
+          return (
+            <div key={m.id} className="px-3 py-2 rounded border border-cyan-600/40 bg-slate-900">
+              <span className="text-white font-semibold">{m.name}</span>
+              <span className="ml-2 text-cyan-100">SP {s.sp} / HP {s.hp} / AIM {s.aim} / 🎲 {s.dice} / ↩ {s.reroll}</span>
+            </div>
+          );
+        })}
+      </div>
     </div>
   );
 }
