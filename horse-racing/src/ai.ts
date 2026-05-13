@@ -20,7 +20,8 @@ function getCurrentActorIndex(state: GameState): number | null {
       return state.currentEquipPlayerIndex;
     case 'race': {
       const s = state.raceSubPhase;
-      if (s === 'draw-initiative' || s === 'action-declare' || s === 'dice-roll' || s === 'resolve')
+      // 'resolve' is intentionally excluded: the human always confirms the result
+      if (s === 'draw-initiative' || s === 'action-declare' || s === 'dice-roll')
         return state.attackerPlayerIndex;
       if (s === 'target-declare') return state.defenderPlayerIndex;
       if (s === 'inheritance') return state.pendingInheritancePlayerIndex;
@@ -133,11 +134,6 @@ function raceAction(state: GameState, cpuIdx: number): GameAction | null {
       if (badIdx >= 0) return { type: 'REROLL_DIE', dieIndex: badIdx };
     }
     return { type: 'CONFIRM_DICE' };
-  }
-
-  if (sub === 'resolve') {
-    if (state.attackerPlayerIndex !== cpuIdx) return null;
-    return { type: 'DRAW_INITIATIVE' };
   }
 
   if (sub === 'inheritance') {

@@ -95,7 +95,7 @@ export default function App() {
     const action = getCpuAction(state);
     if (!action) return;
 
-    const baseDelay = state.phase === 'race' ? 1200 : 700;
+    const baseDelay = state.phase === 'race' ? 1800 : 700;
     const jitter = Math.floor(Math.random() * 250);
     const timer = setTimeout(() => {
       if (state.gameMode === 'online') {

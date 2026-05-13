@@ -32,10 +32,10 @@ export function BaseHorseCard({ horse, selected, onClick, disabled }: BaseCardPr
       </div>
       {/* Stats */}
       <div className="px-4 py-3 grid grid-cols-2 gap-x-6 gap-y-1.5">
-        <StatLine label="脚力" value={horse.ability} />
-        <StatLine label="スピード" value={horse.speed} />
-        <StatLine label="やる気" value={horse.motivation} />
-        <StatLine label="根性" value={horse.grit} />
+        <StatLine label="脚力" value={horse.ability} description="手番の頻度" />
+        <StatLine label="スピード" value={horse.speed} description="前進マス数の倍率" />
+        <StatLine label="やる気" value={horse.motivation} description="有効出目の上限" />
+        <StatLine label="根性" value={horse.grit} description="HP（超えると脱落）" />
       </div>
     </div>
   );
@@ -71,10 +71,10 @@ export function HorseStateCard({ horse, playerColor, compact, showDamage }: Stat
       </div>
       {/* Stats */}
       <div className="px-3 py-2 grid grid-cols-2 gap-x-4 gap-y-1">
-        <StatLineEff label="脚力" base={horse.base.ability} eff={stats.ability} />
-        <StatLineEff label="スピード" base={horse.base.speed} eff={stats.speed} />
-        <StatLineEff label="やる気" base={horse.base.motivation} eff={stats.motivation} />
-        <StatLineEff label="根性" base={horse.base.grit} eff={stats.grit} />
+        <StatLineEff label="脚力" base={horse.base.ability} eff={stats.ability} description={compact ? undefined : "手番頻度"} />
+        <StatLineEff label="スピード" base={horse.base.speed} eff={stats.speed} description={compact ? undefined : "前進倍率"} />
+        <StatLineEff label="やる気" base={horse.base.motivation} eff={stats.motivation} description={compact ? undefined : "有効出目≤"} />
+        <StatLineEff label="根性" base={horse.base.grit} eff={stats.grit} description={compact ? undefined : "HP"} />
       </div>
       {/* Damage bar */}
       {showDamage && !horse.fallen && (
@@ -107,21 +107,27 @@ export function HorseStateCard({ horse, playerColor, compact, showDamage }: Stat
 
 // ── Helpers ──────────────────────────────────────────────────────────────────
 
-function StatLine({ label, value }: { label: string; value: number }) {
+function StatLine({ label, value, description }: { label: string; value: number; description?: string }) {
   return (
-    <div className="flex justify-between items-center">
-      <span className="text-sm text-gray-500">{label}</span>
-      <span className="text-sm font-bold text-gray-800 tabular-nums">{value}</span>
+    <div className="flex justify-between items-start">
+      <div className="flex flex-col">
+        <span className="text-sm text-gray-600 font-medium">{label}</span>
+        {description && <span className="text-[10px] text-gray-400 leading-tight">{description}</span>}
+      </div>
+      <span className="text-sm font-bold text-gray-800 tabular-nums mt-0.5">{value}</span>
     </div>
   );
 }
 
-function StatLineEff({ label, base, eff }: { label: string; base: number; eff: number }) {
+function StatLineEff({ label, base, eff, description }: { label: string; base: number; eff: number; description?: string }) {
   const diff = eff - base;
   return (
-    <div className="flex justify-between items-center">
-      <span className="text-xs text-gray-500">{label}</span>
-      <span className={`text-xs font-bold tabular-nums ${diff > 0 ? 'text-emerald-600' : diff < 0 ? 'text-red-500' : 'text-gray-800'}`}>
+    <div className="flex justify-between items-start">
+      <div className="flex flex-col">
+        <span className="text-xs text-gray-600">{label}</span>
+        {description && <span className="text-[10px] text-gray-400 leading-tight">{description}</span>}
+      </div>
+      <span className={`text-xs font-bold tabular-nums mt-0.5 ${diff > 0 ? 'text-emerald-600' : diff < 0 ? 'text-red-500' : 'text-gray-800'}`}>
         {eff}{diff !== 0 && <span className="text-[10px] ml-0.5">({diff > 0 ? '+' : ''}{diff})</span>}
       </span>
     </div>
