@@ -176,6 +176,11 @@ function processCpuTurn(roomCode: string) {
         const mechId = cpuSelectDefenderMech(r.state);
         if (!mechId) return;
         r.state = applySelectDefender(r.state, mechId);
+        if (r.state.battleRound?.pendingHits && r.state.battleRound.pendingHits > 0) {
+          r.state = applyApplyDamage(r.state);
+        } else {
+          r.state = { ...r.state, battleRound: r.state.battleRound ? { ...r.state.battleRound, subPhase: "draw" } : null };
+        }
         broadcast(r.code, r.state);
         processCpuTurn(roomCode);
       }, 1400);

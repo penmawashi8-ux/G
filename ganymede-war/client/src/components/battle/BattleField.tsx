@@ -118,7 +118,19 @@ export default function BattleField() {
       {/* Defender selection */}
       {br.subPhase === "selectDefender" && isDefender && (
         <div className="card-base border-blue-700">
-          <h3 className="text-sm font-bold text-blue-400 mb-2">防御するメックを選択してください</h3>
+          <div className="flex items-center justify-between flex-wrap gap-2 mb-2">
+            <h3 className="text-sm font-bold text-blue-400">防御するメックを選択してください</h3>
+            {br.pendingHits > 0 && (
+              <span className="text-sm font-bold text-orange-400 bg-orange-900/40 px-2 py-0.5 rounded">
+                受けるダメージ: {br.pendingHits}
+              </span>
+            )}
+          </div>
+          {attackerMech && br.diceResults.length > 0 && (
+            <p className="text-xs text-gray-500 mb-2">
+              {attackerMech.mechCard.name} — AIM {attackerMech.computedStats.aim + attackerMech.inheritBonus.aim} / 🎲 {br.diceResults.length}ダイス → {br.pendingHits}ヒット
+            </p>
+          )}
           <div className="flex gap-3 flex-wrap">
             {myAliveMechs.map((mech) => (
               <MechStatus
@@ -139,6 +151,11 @@ export default function BattleField() {
       {/* Dice roller */}
       {(br.subPhase === "roll" || br.subPhase === "reroll" || br.subPhase === "resolve") && (
         <div className="card-base">
+          {!isAttacker && attackerMech && (
+            <p className="text-xs text-gray-500 mb-2 text-center">
+              {attackerMech.mechCard.name} が攻撃中 — AIM {attackerMech.computedStats.aim + attackerMech.inheritBonus.aim} / 🎲 {attackerMech.computedStats.dice}
+            </p>
+          )}
           {attackerMech && (
             <DiceRoller
               results={br.diceResults}
