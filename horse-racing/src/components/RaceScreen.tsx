@@ -1,8 +1,8 @@
 import React from 'react';
 import { GameState, ActionType, RaceSubPhase } from '../types';
 import { GameAction } from '../gameReducer';
-import { COLOR_CLASS, COLOR_LABEL, COLOR_BG_LIGHT, COLOR_BORDER } from '../data';
-import { getEffectiveStats, countValidDice } from '../utils';
+import { COLOR_CLASS, COLOR_LABEL, COLOR_BORDER } from '../data';
+import { getEffectiveStats, isDiceSuccess } from '../utils';
 import TrackBoard from './TrackBoard';
 import DiceRoller from './DiceRoller';
 import { HorseStateCard } from './HorseCard';
@@ -14,10 +14,8 @@ interface Props {
 }
 
 const DIR_LABEL = { left: '左 ←', right: '右 →' };
-
 const PLAYER_TEXT_COLORS = ['text-rose-600', 'text-emerald-600', 'text-slate-700', 'text-violet-600'];
 
-// Step indicator config
 const BATTLE_STEPS = [
   { id: 'draw-initiative', label: '手番決定', icon: '🃏' },
   { id: 'action-declare', label: '行動選択', icon: '✋' },
@@ -49,7 +47,7 @@ function BattleStepIndicator({ current }: { current: RaceSubPhase | null }) {
   );
 }
 
-export default function RaceScreen({ state, dispatch, myTurn = true }: Props) {
+export default function RaceScreen({ state, dispatch }: Props) {
   const sub = state.raceSubPhase;
 
   const attacker = state.attackerPlayerIndex != null ? state.players[state.attackerPlayerIndex] : null;
@@ -88,7 +86,7 @@ export default function RaceScreen({ state, dispatch, myTurn = true }: Props) {
           <div className="bg-orange-50 border-2 border-orange-300 rounded-xl p-4">
             <h3 className="font-bold text-orange-800 text-lg mb-2">💫 気合の継承</h3>
             <p className="text-orange-700 text-sm mb-3">
-              {inheritPlayer.name}: 脱落した馬の魂を引き継ぐ馬を選んでください（やる気・根性+1）
+              {inheritPlayer.name}: 脱落した馬の魂を引き継ぐ馬を選んでください（体力+1）
             </p>
             <div className="grid grid-cols-2 gap-3">
               {inheritPlayer.horses.map((h, hi) => {
@@ -101,13 +99,11 @@ export default function RaceScreen({ state, dispatch, myTurn = true }: Props) {
                     onClick={() => canReceive && dispatch({ type: 'SELECT_INHERITANCE_HORSE', targetHorseIndex: hi })}
                     disabled={!canReceive}
                     className={`p-3 rounded-xl border-2 text-left transition-all
-                      ${canReceive ? 'border-orange-400 hover:bg-orange-100 cursor-pointer' : 'border-gray-300 opacity-50 cursor-not-allowed'}
-                    `}
+                      ${canReceive ? 'border-orange-400 hover:bg-orange-100 cursor-pointer' : 'border-gray-300 opacity-50 cursor-not-allowed'}`}
                   >
                     <p className="font-bold text-gray-800">{h.base.name}</p>
                     <p className="text-xs text-gray-500">
-                      やる気{getEffectiveStats(h).motivation}→{getEffectiveStats(h).motivation + 1} /
-                      根性(HP){getEffectiveStats(h).grit}→{getEffectiveStats(h).grit + 1}
+                      体力 {getEffectiveStats(h).hp} → {getEffectiveStats(h).hp + 1}
                     </p>
                     {!canReceive && <p className="text-xs text-red-500">継承済み</p>}
                   </button>
@@ -121,7 +117,7 @@ export default function RaceScreen({ state, dispatch, myTurn = true }: Props) {
           <div className="bg-pink-50 border-2 border-pink-300 rounded-xl p-4">
             <h3 className="font-bold text-pink-800 text-lg mb-2">💛 絆の継承</h3>
             <p className="text-pink-700 text-sm mb-3">
-              {bondPlayer.name}: チームの仲間の魂を引き継ぐ馬を選んでください（やる気・根性+1）
+              {bondPlayer.name}: チームの仲間の魂を引き継ぐ馬を選んでください（体力+1）
             </p>
             <div className="grid grid-cols-2 gap-3">
               {bondPlayer.horses.map((h, hi) => {
@@ -133,13 +129,11 @@ export default function RaceScreen({ state, dispatch, myTurn = true }: Props) {
                     onClick={() => canReceive && dispatch({ type: 'SELECT_BOND_HORSE', targetHorseIndex: hi })}
                     disabled={!canReceive}
                     className={`p-3 rounded-xl border-2 text-left transition-all
-                      ${canReceive ? 'border-pink-400 hover:bg-pink-100 cursor-pointer' : 'border-gray-300 opacity-50 cursor-not-allowed'}
-                    `}
+                      ${canReceive ? 'border-pink-400 hover:bg-pink-100 cursor-pointer' : 'border-gray-300 opacity-50 cursor-not-allowed'}`}
                   >
                     <p className="font-bold text-gray-800">{h.base.name}</p>
                     <p className="text-xs text-gray-500">
-                      やる気{getEffectiveStats(h).motivation}→{getEffectiveStats(h).motivation + 1} /
-                      根性(HP){getEffectiveStats(h).grit}→{getEffectiveStats(h).grit + 1}
+                      体力 {getEffectiveStats(h).hp} → {getEffectiveStats(h).hp + 1}
                     </p>
                     {!canReceive && <p className="text-xs text-red-500">継承済み</p>}
                   </button>
@@ -150,10 +144,9 @@ export default function RaceScreen({ state, dispatch, myTurn = true }: Props) {
         )}
 
         {/* ── MAIN TURN AREA ── */}
-        {(sub === 'draw-initiative' || sub === 'action-declare' || sub === 'target-declare' || sub === 'dice-roll' || sub === 'reroll' || sub === 'resolve') && (
+        {(sub === 'draw-initiative' || sub === 'action-declare' || sub === 'target-declare' || sub === 'dice-roll' || sub === 'resolve') && (
           <div className="bg-white rounded-xl p-4 shadow-md">
 
-            {/* Step indicator */}
             <BattleStepIndicator current={sub} />
 
             {/* Draw initiative */}
@@ -170,7 +163,7 @@ export default function RaceScreen({ state, dispatch, myTurn = true }: Props) {
             )}
 
             {/* Initiative card shown */}
-            {(sub === 'action-declare' || sub === 'target-declare' || sub === 'dice-roll' || sub === 'reroll' || sub === 'resolve') && state.currentInitiativeCard && attacker && attackerHorse && (
+            {(sub === 'action-declare' || sub === 'target-declare' || sub === 'dice-roll' || sub === 'resolve') && state.currentInitiativeCard && attacker && attackerHorse && attackerStats && (
               <>
                 {/* Current turn banner */}
                 <div className={`flex items-center gap-3 mb-4 p-3 rounded-xl ${['bg-rose-50','bg-emerald-50','bg-slate-50','bg-violet-50'][state.attackerPlayerIndex!]}`}>
@@ -180,35 +173,23 @@ export default function RaceScreen({ state, dispatch, myTurn = true }: Props) {
                   </div>
                   <div className="flex-1 min-w-0">
                     <p className="text-[11px] text-gray-400 font-medium">手番プレイヤー</p>
-                    <p className={`font-bold text-lg ${PLAYER_TEXT_COLORS[state.attackerPlayerIndex!]}`}>
-                      {attacker.name}
-                    </p>
+                    <p className={`font-bold text-lg ${PLAYER_TEXT_COLORS[state.attackerPlayerIndex!]}`}>{attacker.name}</p>
                     <p className="text-sm text-gray-700 font-medium">🏇 {attackerHorse.base.name}</p>
-                    {attackerStats && (
-                      <div className="flex flex-wrap gap-1.5 text-xs mt-1">
-                        <span className="bg-yellow-100 text-yellow-800 px-2 py-0.5 rounded-full font-medium">
-                          脚力{attackerStats.ability}<span className="text-yellow-600 font-normal ml-1 text-[10px]">手番頻度</span>
-                        </span>
-                        <span className="bg-blue-100 text-blue-800 px-2 py-0.5 rounded-full font-medium">
-                          速{attackerStats.speed}<span className="text-blue-600 font-normal ml-1 text-[10px]">前進倍率</span>
-                        </span>
-                        <span className="bg-orange-100 text-orange-800 px-2 py-0.5 rounded-full font-medium">
-                          気{attackerStats.motivation}<span className="text-orange-600 font-normal ml-1 text-[10px]">有効出目≤</span>
-                        </span>
-                        {attackerStats.extraDice > 0 && <span className="bg-purple-100 text-purple-700 px-2 py-0.5 rounded-full font-medium">🎲+{attackerStats.extraDice}</span>}
-                        {attackerStats.extraReroll > 0 && <span className="bg-indigo-100 text-indigo-700 px-2 py-0.5 rounded-full font-medium">↺+{attackerStats.extraReroll}</span>}
-                      </div>
-                    )}
+                    <div className="flex gap-2 mt-1 text-xs">
+                      <span className="bg-blue-100 text-blue-800 px-2 py-0.5 rounded-full font-medium">
+                        スピード {attackerStats.speed}
+                        <span className="font-normal text-blue-600 ml-1">成功率{Math.round((6 - attackerStats.speed) / 6 * 100)}%</span>
+                      </span>
+                      <span className="bg-red-100 text-red-800 px-2 py-0.5 rounded-full font-medium">
+                        体力 {attackerStats.hp - attackerHorse.damage}/{attackerStats.hp}
+                      </span>
+                    </div>
                   </div>
                   {defender && sub !== 'action-declare' && (
                     <div className="text-right flex-shrink-0">
                       <p className="text-[11px] text-gray-400">{DIR_LABEL[state.currentInitiativeCard.direction]}</p>
-                      <p className={`font-bold text-sm ${PLAYER_TEXT_COLORS[state.defenderPlayerIndex!]}`}>
-                        {defender.name}
-                      </p>
-                      {defenderHorse && (
-                        <p className="text-xs text-gray-500">{defenderHorse.base.name}</p>
-                      )}
+                      <p className={`font-bold text-sm ${PLAYER_TEXT_COLORS[state.defenderPlayerIndex!]}`}>{defender.name}</p>
+                      {defenderHorse && <p className="text-xs text-gray-500">{defenderHorse.base.name}</p>}
                     </div>
                   )}
                 </div>
@@ -226,10 +207,10 @@ export default function RaceScreen({ state, dispatch, myTurn = true }: Props) {
                       >
                         <div className="font-bold text-emerald-700 text-lg">🏃 前進</div>
                         <div className="text-xs text-gray-600 mt-2 leading-relaxed">
-                          有効サイコロ数 × <span className="font-bold text-blue-600">スピード({attackerStats?.speed})</span> マス進む
+                          成功したら<br /><span className="font-bold text-emerald-700">出目の数だけ</span>進む
                         </div>
                         <div className="text-[11px] text-gray-400 mt-1">
-                          やる気{attackerStats?.motivation}以下が有効
+                          成功率 {Math.round((6 - attackerStats.speed) / 6 * 100)}%
                         </div>
                       </button>
                       <button
@@ -238,7 +219,7 @@ export default function RaceScreen({ state, dispatch, myTurn = true }: Props) {
                       >
                         <div className="font-bold text-red-700 text-lg">⚔️ 斜行</div>
                         <div className="text-xs text-gray-600 mt-2 leading-relaxed">
-                          有効サイコロ数 分だけ<br />相手の<span className="font-bold text-red-600">根性(HP)</span>にダメージ
+                          成功したら相手の<br /><span className="font-bold text-red-600">体力に1ダメージ</span>
                         </div>
                         <div className="text-[11px] text-gray-400 mt-1">
                           {DIR_LABEL[state.currentInitiativeCard.direction]}のプレイヤーが対象
@@ -263,7 +244,8 @@ export default function RaceScreen({ state, dispatch, myTurn = true }: Props) {
                       {defender.horses.map((h, hi) => {
                         if (h.fallen) return null;
                         const stats = getEffectiveStats(h);
-                        const hpPercent = Math.min(100, (h.damage / stats.grit) * 100);
+                        const hpRemaining = stats.hp - h.damage;
+                        const hpPercent = stats.hp > 0 ? (hpRemaining / stats.hp) * 100 : 0;
                         return (
                           <button
                             key={hi}
@@ -272,14 +254,14 @@ export default function RaceScreen({ state, dispatch, myTurn = true }: Props) {
                           >
                             <p className="font-bold text-gray-800 text-sm">{h.base.name}</p>
                             <div className="flex items-center gap-2 mt-1.5">
-                              <span className="text-xs text-gray-500">根性(HP)</span>
+                              <span className="text-xs text-gray-500">体力</span>
                               <div className="flex-1 bg-gray-200 rounded-full h-1.5">
                                 <div
-                                  className={`h-1.5 rounded-full ${hpPercent >= 75 ? 'bg-red-400' : hpPercent >= 40 ? 'bg-yellow-400' : 'bg-emerald-400'}`}
-                                  style={{ width: `${100 - hpPercent}%` }}
+                                  className={`h-1.5 rounded-full ${hpPercent <= 33 ? 'bg-red-400' : hpPercent <= 66 ? 'bg-yellow-400' : 'bg-emerald-400'}`}
+                                  style={{ width: `${hpPercent}%` }}
                                 />
                               </div>
-                              <span className="text-xs font-bold text-gray-700">{stats.grit - h.damage}/{stats.grit}</span>
+                              <span className="text-xs font-bold text-gray-700">{hpRemaining}/{stats.hp}</span>
                             </div>
                           </button>
                         );
@@ -289,28 +271,25 @@ export default function RaceScreen({ state, dispatch, myTurn = true }: Props) {
                 )}
 
                 {/* Dice roll */}
-                {(sub === 'dice-roll' || sub === 'reroll') && attackerStats && (
+                {sub === 'dice-roll' && state.diceValues.length > 0 && (
                   <DiceRoller
-                    values={state.diceValues}
-                    rerolled={state.diceRerolled}
-                    rerollsRemaining={state.rerollsRemaining}
-                    motivation={attackerStats.motivation}
-                    onReroll={(i) => dispatch({ type: 'REROLL_DIE', dieIndex: i })}
+                    dieValue={state.diceValues[0]}
+                    speed={attackerStats.speed}
+                    action={state.declaredAction as 'advance' | 'obstruct'}
                     onConfirm={() => dispatch({ type: 'CONFIRM_DICE' })}
-                    phase={state.rerollsRemaining > 0 ? 'reroll' : 'rolling'}
                   />
                 )}
 
-                {/* Resolve result */}
-                {sub === 'resolve' && attackerStats && (() => {
-                  const validCount = countValidDice(state.diceValues, attackerStats.motivation);
+                {/* Resolve */}
+                {sub === 'resolve' && state.diceValues.length > 0 && (() => {
+                  const die = state.diceValues[0];
+                  const success = isDiceSuccess(die, attackerStats.speed);
                   const isAdvance = state.declaredAction === 'advance';
 
                   return (
                     <div>
-                      {/* Result card */}
                       <div className={`rounded-xl p-4 mb-3 border-2 ${isAdvance ? 'bg-emerald-50 border-emerald-300' : 'bg-red-50 border-red-300'}`}>
-                        {/* Who did what */}
+                        {/* Header */}
                         <div className="flex items-center gap-2 mb-3 pb-3 border-b border-gray-200">
                           <span className="text-2xl">{isAdvance ? '🏃' : '⚔️'}</span>
                           <div>
@@ -327,59 +306,53 @@ export default function RaceScreen({ state, dispatch, myTurn = true }: Props) {
                           </div>
                         </div>
 
-                        {/* Dice display */}
-                        <div className="flex justify-center gap-1.5 mb-2">
-                          {state.diceValues.map((v, i) => {
-                            const valid = v <= attackerStats.motivation;
-                            return (
-                              <div key={i} className={`w-9 h-9 rounded-lg border-2 flex items-center justify-center text-lg
-                                ${valid ? 'border-emerald-400 bg-emerald-100' : 'border-gray-300 bg-gray-100 opacity-40'}`}>
-                                {['','⚀','⚁','⚂','⚃','⚄','⚅'][v]}
-                              </div>
-                            );
-                          })}
+                        {/* Die result */}
+                        <div className="flex items-center justify-center gap-4 mb-3">
+                          <div className={`w-14 h-14 rounded-xl border-3 flex items-center justify-center text-4xl
+                            ${success ? 'border-emerald-400 bg-emerald-100' : 'border-red-300 bg-red-100'}`}>
+                            {['','⚀','⚁','⚂','⚃','⚄','⚅'][die]}
+                          </div>
+                          <div className="text-sm text-gray-600">
+                            <p>出目 <span className="font-black text-xl text-gray-900">{die}</span> vs スピード <span className="font-bold">{attackerStats.speed}</span></p>
+                            <p className={`font-bold ${success ? 'text-emerald-700' : 'text-red-600'}`}>
+                              {success ? '✓ 成功！' : '✗ 失敗…'}
+                            </p>
+                          </div>
                         </div>
-                        <p className="text-center text-xs text-gray-500 mb-3">
-                          有効 {validCount}/{state.diceValues.length} 個（やる気{attackerStats.motivation}以下が有効）
-                        </p>
 
-                        {/* Result */}
+                        {/* Outcome */}
                         {isAdvance ? (
                           <div className="text-center">
-                            <p className="font-black text-emerald-700 text-3xl">
-                              +{validCount * attackerStats.speed} マス！
+                            <p className={`font-black text-3xl ${success ? 'text-emerald-700' : 'text-gray-400'}`}>
+                              {success ? `+${die} マス！` : '前進なし'}
                             </p>
-                            <p className="text-xs text-emerald-600 mt-1">
-                              有効{validCount}個 × スピード{attackerStats.speed} = {validCount * attackerStats.speed}マス前進
-                            </p>
-                            <p className="text-sm text-gray-600 mt-2 font-medium">
-                              現在位置: <span className="font-bold text-gray-800">{attackerHorse.position}</span>
-                              <span className="text-gray-400"> / {state.raceDistance}</span>
+                            <p className="text-sm text-gray-600 mt-1">
+                              現在位置: <span className="font-bold">{attackerHorse.position}</span> / {state.raceDistance}
                             </p>
                           </div>
                         ) : (
                           <div className="text-center">
-                            <p className="font-black text-red-600 text-3xl">
-                              -{validCount} ダメージ！
+                            <p className={`font-black text-3xl ${success ? 'text-red-600' : 'text-gray-400'}`}>
+                              {success ? '-1 ダメージ！' : 'ダメージなし'}
                             </p>
-                            {defenderHorse && defenderStats && (
+                            {success && defenderHorse && defenderStats && (
                               <div className="mt-2 bg-white/60 rounded-lg p-2">
-                                <p className="text-sm text-gray-700 font-medium">{defenderHorse.base.name} の根性(HP)</p>
+                                <p className="text-sm text-gray-700 font-medium">{defenderHorse.base.name} の体力</p>
                                 <div className="flex items-center justify-center gap-2 mt-1">
-                                  <span className="text-gray-500 font-bold">{defenderHorse.damage - validCount}</span>
+                                  <span className="text-gray-500 font-bold">{defenderHorse.damage - 1}</span>
                                   <span className="text-gray-400">→</span>
-                                  <span className={`font-black text-lg ${defenderHorse.damage >= defenderStats.grit ? 'text-red-700' : 'text-gray-800'}`}>
+                                  <span className={`font-black text-lg ${defenderHorse.damage >= defenderStats.hp ? 'text-red-700' : 'text-gray-800'}`}>
                                     {defenderHorse.damage}
                                   </span>
-                                  <span className="text-gray-400 text-sm">/ {defenderStats.grit}</span>
+                                  <span className="text-gray-400 text-sm">/ {defenderStats.hp}</span>
                                 </div>
                                 <div className="w-full bg-gray-200 rounded-full h-2 mt-1.5">
                                   <div
                                     className={`h-2 rounded-full transition-all ${
-                                      defenderHorse.damage / defenderStats.grit >= 0.75 ? 'bg-red-500' :
-                                      defenderHorse.damage / defenderStats.grit >= 0.5 ? 'bg-yellow-500' : 'bg-emerald-500'
+                                      (defenderHorse.damage / defenderStats.hp) >= 0.75 ? 'bg-red-500' :
+                                      (defenderHorse.damage / defenderStats.hp) >= 0.5 ? 'bg-yellow-500' : 'bg-emerald-500'
                                     }`}
-                                    style={{ width: `${Math.max(0, 100 - (defenderHorse.damage / defenderStats.grit) * 100)}%` }}
+                                    style={{ width: `${Math.max(0, 100 - (defenderHorse.damage / defenderStats.hp) * 100)}%` }}
                                   />
                                 </div>
                               </div>
@@ -415,13 +388,7 @@ export default function RaceScreen({ state, dispatch, myTurn = true }: Props) {
               </div>
               <div className="grid grid-cols-2 gap-2">
                 {p.horses.map((h, hi) => (
-                  <HorseStateCard
-                    key={hi}
-                    horse={h}
-                    playerColor={p.color}
-                    compact
-                    showDamage
-                  />
+                  <HorseStateCard key={hi} horse={h} playerColor={p.color} compact showDamage />
                 ))}
               </div>
             </div>
@@ -433,9 +400,7 @@ export default function RaceScreen({ state, dispatch, myTurn = true }: Props) {
           <p className="text-white/70 text-xs font-medium mb-2">ゲームログ</p>
           <div className="space-y-1 max-h-36 overflow-y-auto">
             {state.gameLog.map((entry, i) => (
-              <p key={i} className={`text-xs ${i === 0 ? 'text-white' : 'text-white/50'}`}>
-                {entry}
-              </p>
+              <p key={i} className={`text-xs ${i === 0 ? 'text-white' : 'text-white/50'}`}>{entry}</p>
             ))}
           </div>
         </div>

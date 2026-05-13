@@ -53,9 +53,7 @@ function HorseSimCard({ horse, part }: { horse: HorseState; part: Part }) {
   const before = getEffectiveStats(horse);
   const testHorse = { ...horse, [part.slot]: part };
   const after = getEffectiveStats(testHorse);
-  const isInvalid = after.ability < 1 || after.motivation < 1 || after.grit < 1;
-  const extraDiceDiff = after.extraDice - before.extraDice;
-  const extraRerollDiff = after.extraReroll - before.extraReroll;
+  const isInvalid = after.speed < 1 || after.hp < 1;
 
   return (
     <div className={`rounded-xl border-2 p-3 ${isInvalid ? 'border-red-300 bg-red-50' : 'border-gray-200 bg-gray-50'}`}>
@@ -64,17 +62,9 @@ function HorseSimCard({ horse, part }: { horse: HorseState; part: Part }) {
         {isInvalid && <span className="text-xs text-red-600 font-semibold bg-red-100 px-2 py-0.5 rounded-full">⚠️ 装備不可</span>}
       </div>
       <div className="space-y-1">
-        <StatSimRow label="脚力" desc="手番頻度" before={before.ability} after={after.ability} />
-        <StatSimRow label="スピード" desc="前進倍率" before={before.speed} after={after.speed} />
-        <StatSimRow label="やる気" desc="有効出目≤" before={before.motivation} after={after.motivation} />
-        <StatSimRow label="根性" desc="HP" before={before.grit} after={after.grit} />
+        <StatSimRow label="スピード" desc="この値より大きい出目で成功" before={before.speed} after={after.speed} />
+        <StatSimRow label="体力" desc="HP（これ以上ダメージで脱落）" before={before.hp} after={after.hp} />
       </div>
-      {(extraDiceDiff !== 0 || extraRerollDiff !== 0) && (
-        <div className="flex gap-1.5 mt-2">
-          {extraDiceDiff > 0 && <span className="text-[11px] bg-blue-100 text-blue-700 px-2 py-0.5 rounded-full font-medium">🎲+{extraDiceDiff}</span>}
-          {extraRerollDiff > 0 && <span className="text-[11px] bg-purple-100 text-purple-700 px-2 py-0.5 rounded-full font-medium">↺+{extraRerollDiff}</span>}
-        </div>
-      )}
     </div>
   );
 }
@@ -89,12 +79,8 @@ function SimulationPanel({ part, horses, myTurn, onConfirm, onClose }: {
   onClose: () => void;
 }) {
   const modEntries = [
-    part.abilityMod !== 0 && { label: `脚力${part.abilityMod > 0 ? '+' : ''}${part.abilityMod}`, positive: part.abilityMod > 0 },
-    part.speedMod !== 0 && { label: `速度${part.speedMod > 0 ? '+' : ''}${part.speedMod}`, positive: part.speedMod > 0 },
-    part.motivationMod !== 0 && { label: `やる気${part.motivationMod > 0 ? '+' : ''}${part.motivationMod}`, positive: part.motivationMod > 0 },
-    part.gritMod !== 0 && { label: `根性${part.gritMod > 0 ? '+' : ''}${part.gritMod}`, positive: part.gritMod > 0 },
-    part.extraDice > 0 && { label: `🎲+${part.extraDice}`, positive: true },
-    part.extraReroll > 0 && { label: `↺+${part.extraReroll}`, positive: true },
+    part.speedMod !== 0 && { label: `スピード${part.speedMod > 0 ? '+' : ''}${part.speedMod}`, positive: part.speedMod < 0 },
+    part.hpMod !== 0 && { label: `体力${part.hpMod > 0 ? '+' : ''}${part.hpMod}`, positive: part.hpMod > 0 },
   ].filter(Boolean) as { label: string; positive: boolean }[];
 
   return (
@@ -169,13 +155,9 @@ function SimulationPanel({ part, horses, myTurn, onConfirm, onClose }: {
 
 function PartCard({ part, onClick, previewing }: { part: Part; onClick: () => void; previewing?: boolean }) {
   const mods = [
-    part.abilityMod !== 0 && `脚力${part.abilityMod > 0 ? '+' : ''}${part.abilityMod}`,
-    part.speedMod !== 0 && `速${part.speedMod > 0 ? '+' : ''}${part.speedMod}`,
-    part.motivationMod !== 0 && `気${part.motivationMod > 0 ? '+' : ''}${part.motivationMod}`,
-    part.gritMod !== 0 && `根${part.gritMod > 0 ? '+' : ''}${part.gritMod}`,
-    part.extraDice > 0 && `サイコロ+${part.extraDice}`,
-    part.extraReroll > 0 && `↺+${part.extraReroll}`,
-  ].filter(Boolean) as string[];
+    part.speedMod !== 0 && { label: `スピード${part.speedMod > 0 ? '+' : ''}${part.speedMod}`, good: part.speedMod < 0 },
+    part.hpMod !== 0 && { label: `体力${part.hpMod > 0 ? '+' : ''}${part.hpMod}`, good: part.hpMod > 0 },
+  ].filter(Boolean) as { label: string; good: boolean }[];
 
   return (
     <div
@@ -198,10 +180,8 @@ function PartCard({ part, onClick, previewing }: { part: Part; onClick: () => vo
       </div>
       <div className="flex flex-wrap gap-1">
         {mods.map((m, i) => (
-          <span key={i} className={`text-xs px-1.5 py-0.5 rounded font-medium ${
-            m.includes('+') ? 'bg-green-100 text-green-700' : m.startsWith('サイコロ') || m.startsWith('↺') ? 'bg-blue-100 text-blue-700' : 'bg-red-100 text-red-700'
-          }`}>
-            {m}
+          <span key={i} className={`text-xs px-1.5 py-0.5 rounded font-medium ${m.good ? 'bg-green-100 text-green-700' : 'bg-red-100 text-red-700'}`}>
+            {m.label}
           </span>
         ))}
         {mods.length === 0 && <span className="text-xs text-gray-400">補正なし</span>}
