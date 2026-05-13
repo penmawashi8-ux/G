@@ -13,12 +13,12 @@ export function generateRoomCode(): string {
   return Array.from({ length: 6 }, () => chars[Math.floor(Math.random() * chars.length)]).join('');
 }
 
-export async function createRoom(roomCode: string, state: GameState): Promise<boolean> {
-  if (!supabase) return false;
+export async function createRoom(roomCode: string, state: GameState): Promise<string | null> {
+  if (!supabase) return 'env vars not loaded (VITE_SUPABASE_URL / VITE_SUPABASE_ANON_KEY)';
   const { error } = await supabase
     .from('horse_racing_rooms')
     .insert({ room_code: roomCode, state: state as unknown as Record<string, unknown> });
-  return !error;
+  return error ? (error.message || JSON.stringify(error)) : null;
 }
 
 export async function joinRoom(roomCode: string): Promise<GameState | null> {
