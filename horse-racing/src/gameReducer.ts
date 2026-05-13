@@ -346,7 +346,12 @@ export function gameReducer(state: GameState, action: GameAction): GameState {
     }
 
     case 'CONFIRM_RACE_DISTANCE':
-      return { ...state, phase: 'parts-draft' };
+      return {
+        ...state,
+        phase: 'parts-draft',
+        currentDraftPlayerIndex: state.startPlayerIndex,
+        partsPicksDone: 0,
+      };
 
     case 'SELECT_PART': {
       const part = state.currentDraftParts.find(p => p.id === action.partId)!;
