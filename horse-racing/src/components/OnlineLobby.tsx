@@ -87,7 +87,7 @@ export default function OnlineLobby({ state, dispatch, onSyncedDispatch }: Props
             </button>
           </div>
           <button
-            onClick={() => dispatch({ type: 'SET_GAME_MODE', mode: 'local', playerTypes: Array(state.playerCount).fill('human') })}
+            onClick={() => dispatch({ type: 'EXIT_ONLINE_LOBBY' })}
             className="mt-6 w-full text-sm text-gray-400 hover:text-gray-600 transition-colors"
           >
             ← 戻る
