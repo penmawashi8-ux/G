@@ -177,7 +177,6 @@ export default function RaceScreen({ state, dispatch, myTurn = true }: Props) {
                         onClick={() => dispatch({ type: 'DECLARE_ACTION', actionType: 'advance' })}
                         className="p-4 bg-emerald-50 border-2 border-emerald-400 rounded-xl hover:bg-emerald-100 transition-all hover:scale-105 text-center"
                       >
-                        <div className="text-3xl mb-1">⚡</div>
                         <div className="font-bold text-emerald-700">前進</div>
                         <div className="text-xs text-gray-500 mt-1">
                           有効出目×スピード({attackerStats?.speed})マス進む
@@ -185,9 +184,8 @@ export default function RaceScreen({ state, dispatch, myTurn = true }: Props) {
                       </button>
                       <button
                         onClick={() => dispatch({ type: 'DECLARE_ACTION', actionType: 'obstruct' })}
-                        className="p-4 bg-red-50 border-2 border-red-400 rounded-xl hover:bg-red-100 transition-all hover:scale-105 text-center"
+                        className="p-4 bg-red-50 border-2 border-red-400 rounded-xl hover:bg-red-100 transition-all hover:scale-105 text-center italic skew-x-6"
                       >
-                        <div className="text-3xl mb-1">💥</div>
                         <div className="font-bold text-red-700">妨害</div>
                         <div className="text-xs text-gray-500 mt-1">
                           相手の馬に有効出目分ダメージ
