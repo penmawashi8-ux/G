@@ -1,5 +1,5 @@
 import { useGameStore } from "../../store/gameStore";
-import { useState } from "react";
+import { useState, useEffect, useRef } from "react";
 import MechCard from "../mech/MechCard";
 import PartCardUI from "./PartCardUI";
 import { PartCard, MechCard as MechCardType } from "@shared/types";
@@ -8,9 +8,24 @@ export default function DraftBoard() {
   const { gameState, playerId, socket } = useGameStore();
   const [hoverPartId, setHoverPartId] = useState<string | null>(null);
   const [selectedPartId, setSelectedPartId] = useState<string | null>(null);
-  if (!gameState || !gameState.draftState) return null;
+  const [batchFlash, setBatchFlash] = useState(false);
+  const prevBatchRef = useRef(0);
 
-  const draft = gameState.draftState;
+  const draft = gameState?.draftState;
+  const batchNum = draft?.step === "parts" ? Math.floor((draft.partsPickCount ?? 0) / 4) + 1 : 1;
+
+  useEffect(() => {
+    if (!draft || draft.step !== "parts") return;
+    if (batchNum > prevBatchRef.current && prevBatchRef.current !== 0) {
+      setBatchFlash(true);
+      const t = setTimeout(() => setBatchFlash(false), 2500);
+      return () => clearTimeout(t);
+    }
+    prevBatchRef.current = batchNum;
+  }, [batchNum, draft?.step]);
+
+  if (!gameState || !draft) return null;
+
   const me = gameState.players.find((p) => p.id === playerId);
   const myTurn = draft.pickOrder[draft.currentPickerIndex] === playerId;
 
@@ -20,11 +35,11 @@ export default function DraftBoard() {
     setSelectedPartId(null);
   }
 
-  const batchNum = Math.floor(draft.partsPickCount / 4) + 1;
+  const picksLeftInBatch = 4 - (draft.partsPickInBatch ?? 0);
   const stepLabel =
     draft.step === "leader" ? "長機を選択" :
     draft.step === "support" ? "僚機を選択" :
-    `パーツを選択 — ${batchNum}巡目 (${draft.partsPickInBatch ?? 0}/4)`;
+    `パーツを選択 — ${batchNum}巡目`;
   const allPreviewableParts = [...draft.availableParts, ...(me?.hand ?? [])];
   const hoverPart = allPreviewableParts.find((p) => p.id === hoverPartId) ?? null;
   const selectedPart = allPreviewableParts.find((p) => p.id === selectedPartId) ?? null;
@@ -79,10 +94,21 @@ export default function DraftBoard() {
 
       {draft.step === "parts" && (
         <div>
-          <h3 className="text-sm text-gray-500 uppercase tracking-widest mb-2">
-            パーツ（{draft.availableParts.length}枚表示中）
-          </h3>
-          <div className="flex flex-wrap gap-1.5">
+          {batchFlash && (
+            <div className="mb-2 py-2 px-4 rounded-lg bg-cyan-700 text-white text-center font-bold animate-pulse">
+              🔄 {batchNum}巡目 — 新しい10枚！
+            </div>
+          )}
+          <div className="flex items-center gap-3 mb-2">
+            <span className={`px-2 py-0.5 rounded-full text-xs font-bold ${batchNum === 1 ? "bg-blue-800 text-blue-200" : "bg-purple-800 text-purple-200"}`}>
+              {batchNum}巡目
+            </span>
+            <span className="text-xs text-gray-500">
+              残り{picksLeftInBatch}ピックで次へ
+            </span>
+            <span className="text-xs text-gray-600">{draft.availableParts.length}枚表示中</span>
+          </div>
+          <div key={batchNum} className="flex flex-wrap gap-1.5">
             {draft.availableParts.map((part) => (
               <div key={part.id} onMouseEnter={() => setHoverPartId(part.id)} onMouseLeave={() => setHoverPartId(null)}>
                 <PartCardUI
