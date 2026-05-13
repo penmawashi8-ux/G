@@ -1,13 +1,16 @@
 import React, { useState } from 'react';
-import { GameState } from '../types';
+import { GameState, PlayerType } from '../types';
 import { GameAction } from '../gameReducer';
-import { generateRoomCode, createRoom, joinRoom } from '../lib/supabase';
+import { generateRoomCode, createRoom, joinRoom, pushState } from '../lib/supabase';
 
 interface Props {
   state: GameState;
   dispatch: React.Dispatch<GameAction>;
   onSyncedDispatch: (action: GameAction) => Promise<void>;
 }
+
+const PLAYER_COLORS = ['bg-rose-500', 'bg-emerald-500', 'bg-slate-700', 'bg-violet-500'];
+const PLAYER_LABELS = ['赤', '緑', '黒', '紫'];
 
 export default function OnlineLobby({ state, dispatch, onSyncedDispatch }: Props) {
   const [mode, setMode] = useState<'choose' | 'host' | 'join'>('choose');
@@ -16,18 +19,22 @@ export default function OnlineLobby({ state, dispatch, onSyncedDispatch }: Props
   const [loading, setLoading] = useState(false);
 
   const roomCode = state.onlineRoomCode;
+  const playerCount = state.playerCount;
+  // Count how many slots are 'human' in the current synced state
+  const connectedCount = (state.playerTypes ?? []).filter(t => t === 'human').length;
 
   async function handleHost() {
     setLoading(true);
     const code = generateRoomCode();
-    // Prepare host state: 2 players, both remote until guests join
-    dispatch({ type: 'SET_PLAYER_COUNT', count: 2 });
+    const count = playerCount;
+    // First slot = host (human), rest = cpu until guests join
+    const playerTypes: PlayerType[] = ['human', ...Array(count - 1).fill('cpu')] as PlayerType[];
     const hostState: GameState = {
       ...state,
-      playerCount: 2,
+      playerCount: count,
       onlineRoomCode: code,
       localPlayerIndex: 0,
-      playerTypes: ['human', 'human'],
+      playerTypes,
     };
     const err = await createRoom(code, hostState);
     if (err) {
@@ -36,6 +43,9 @@ export default function OnlineLobby({ state, dispatch, onSyncedDispatch }: Props
       return;
     }
     dispatch({ type: 'SET_LOCAL_PLAYER', index: 0, roomCode: code });
+    // Sync playerTypes to local state
+    dispatch({ type: 'SET_GAME_MODE', mode: 'online', playerTypes });
+    dispatch({ type: 'SET_PLAYER_COUNT', count });
     setMode('host');
     setStatus('');
     setLoading(false);
@@ -44,31 +54,67 @@ export default function OnlineLobby({ state, dispatch, onSyncedDispatch }: Props
   async function handleJoin() {
     if (joinCode.length < 4) return;
     setLoading(true);
-    const remoteState = await joinRoom(joinCode.toUpperCase());
+    const code = joinCode.toUpperCase();
+    const remoteState = await joinRoom(code);
     if (!remoteState) {
       setStatus('ルームが見つかりません。コードを確認してください。');
       setLoading(false);
       return;
     }
-    dispatch({ type: 'SYNC_STATE', newState: remoteState });
-    dispatch({ type: 'SET_LOCAL_PLAYER', index: 1, roomCode: joinCode.toUpperCase() });
+    // Find first CPU slot (index >= 1) to claim as this guest
+    const guestIndex = remoteState.playerTypes.findIndex((t, i) => i > 0 && t === 'cpu');
+    if (guestIndex < 0) {
+      setStatus('ルームが満員です。');
+      setLoading(false);
+      return;
+    }
+    // Mark our slot as human and push to Supabase so host sees us
+    const updatedTypes: PlayerType[] = remoteState.playerTypes.map((t, i) =>
+      i === guestIndex ? 'human' : t
+    ) as PlayerType[];
+    const updatedState: GameState = { ...remoteState, playerTypes: updatedTypes, localPlayerIndex: guestIndex };
+    await pushState(code, updatedState);
+    dispatch({ type: 'SYNC_STATE', newState: updatedState });
+    dispatch({ type: 'SET_LOCAL_PLAYER', index: guestIndex, roomCode: code });
     setMode('join');
     setStatus('');
     setLoading(false);
   }
 
+  // ── Choose screen ────────────────────────────────────────────────────────────
   if (mode === 'choose') {
     return (
       <div className="min-h-screen bg-emerald-900 flex items-center justify-center p-4">
         <div className="bg-white rounded-2xl shadow-2xl p-8 w-full max-w-sm">
           <h2 className="text-2xl font-bold text-emerald-800 text-center mb-6">オンライン対戦</h2>
+
+          {/* Player count selection (for host) */}
+          <div className="mb-5">
+            <p className="text-sm font-semibold text-gray-600 mb-2">人数を選択（ホスト設定）</p>
+            <div className="flex gap-2">
+              {[2, 3, 4].map(n => (
+                <button
+                  key={n}
+                  onClick={() => dispatch({ type: 'SET_PLAYER_COUNT', count: n })}
+                  className={`flex-1 py-3 rounded-xl border-2 font-bold text-lg transition-all ${
+                    playerCount === n
+                      ? 'bg-emerald-600 text-white border-emerald-700 shadow-md scale-105'
+                      : 'bg-white text-gray-600 border-gray-300 hover:border-emerald-400'
+                  }`}
+                >
+                  {n}人
+                </button>
+              ))}
+            </div>
+          </div>
+
           <div className="space-y-3">
             <button
               onClick={handleHost}
               disabled={loading}
               className="w-full py-4 bg-emerald-600 hover:bg-emerald-700 text-white font-bold text-lg rounded-xl shadow transition-all hover:scale-105 active:scale-95 disabled:opacity-50"
             >
-              {loading ? '作成中…' : 'ルームを作成する（ホスト）'}
+              {loading ? '作成中…' : `ルームを作成する（${playerCount}人・ホスト）`}
             </button>
             <button
               onClick={() => setMode('join')}
@@ -77,6 +123,7 @@ export default function OnlineLobby({ state, dispatch, onSyncedDispatch }: Props
               ルームに参加する
             </button>
           </div>
+
           <button
             onClick={() => dispatch({ type: 'EXIT_ONLINE_LOBBY' })}
             className="mt-6 w-full text-sm text-gray-400 hover:text-gray-600 transition-colors"
@@ -89,6 +136,7 @@ export default function OnlineLobby({ state, dispatch, onSyncedDispatch }: Props
     );
   }
 
+  // ── Join screen ──────────────────────────────────────────────────────────────
   if (mode === 'join' && !roomCode) {
     return (
       <div className="min-h-screen bg-emerald-900 flex items-center justify-center p-4">
@@ -121,45 +169,56 @@ export default function OnlineLobby({ state, dispatch, onSyncedDispatch }: Props
     );
   }
 
-  // Waiting room (host or guest already joined)
+  // ── Waiting room ─────────────────────────────────────────────────────────────
   const isHost = state.localPlayerIndex === 0;
-  const playerCount = state.playerCount;
-  const connectedCount = isHost ? 1 : 2; // simplified; in full impl track per-slot join
 
   return (
     <div className="min-h-screen bg-emerald-900 flex items-center justify-center p-4">
       <div className="bg-white rounded-2xl shadow-2xl p-8 w-full max-w-sm">
         <h2 className="text-2xl font-bold text-emerald-800 text-center mb-2">待機中…</h2>
+
         {roomCode && (
-          <div className="text-center mb-6">
+          <div className="text-center mb-5">
             <p className="text-sm text-gray-500 mb-1">ルームコード</p>
             <p className="text-4xl font-mono font-bold tracking-widest text-emerald-700">{roomCode}</p>
             <p className="text-xs text-gray-400 mt-1">相手にこのコードを伝えてください</p>
           </div>
         )}
-        <div className="flex gap-3 mb-6">
-          {Array.from({ length: playerCount }).map((_, i) => (
-            <div
-              key={i}
-              className={`flex-1 py-3 rounded-xl border-2 text-center font-bold text-sm ${
-                i < connectedCount
-                  ? 'bg-emerald-100 border-emerald-400 text-emerald-700'
-                  : 'bg-gray-100 border-gray-300 text-gray-400'
-              }`}
-            >
-              {i < connectedCount ? `P${i + 1} 接続済み` : `P${i + 1} 待機中…`}
-            </div>
-          ))}
+
+        {/* Player slots */}
+        <div className="grid grid-cols-2 gap-2 mb-5">
+          {Array.from({ length: playerCount }).map((_, i) => {
+            const isHuman = (state.playerTypes[i] ?? 'cpu') === 'human';
+            return (
+              <div
+                key={i}
+                className={`py-3 rounded-xl border-2 text-center text-sm font-bold transition-all ${
+                  isHuman
+                    ? `${PLAYER_COLORS[i]} text-white border-transparent`
+                    : 'bg-gray-100 border-gray-300 text-gray-400'
+                }`}
+              >
+                <div>{PLAYER_LABELS[i]}</div>
+                <div className="text-xs font-normal mt-0.5">
+                  {isHuman ? '接続済み' : 'CPU（空き）'}
+                </div>
+              </div>
+            );
+          })}
         </div>
-        {isHost && (
+
+        <p className="text-center text-xs text-gray-400 mb-4">
+          空きスロットはCPUとして自動参加します
+        </p>
+
+        {isHost ? (
           <button
             onClick={() => onSyncedDispatch({ type: 'START_GAME' })}
             className="w-full py-4 bg-emerald-600 hover:bg-emerald-700 text-white font-bold text-lg rounded-xl shadow transition-all hover:scale-105 active:scale-95"
           >
-            ゲームスタート
+            ゲームスタート（{connectedCount}/{playerCount}人接続）
           </button>
-        )}
-        {!isHost && (
+        ) : (
           <p className="text-center text-gray-500 text-sm">ホストがゲームを開始するのを待っています</p>
         )}
       </div>
