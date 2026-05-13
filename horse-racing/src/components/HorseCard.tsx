@@ -1,5 +1,5 @@
 import React from 'react';
-import { BaseHorse, HorseState, EffectiveStats, Part } from '../types';
+import { BaseHorse, HorseState } from '../types';
 import { getEffectiveStats } from '../utils';
 
 // ── Base horse card (for draft screens) ─────────────────────────────────────
@@ -31,14 +31,29 @@ export function BaseHorseCard({ horse, selected, onClick, disabled }: BaseCardPr
         </span>
       </div>
       {/* Stats */}
-      <div className="px-4 py-3 grid grid-cols-2 gap-x-6 gap-y-1.5">
-        <StatLine label="脚力" value={horse.ability} description="手番の頻度" />
-        <StatLine label="スピード" value={horse.speed} description="前進マス数の倍率" />
-        <StatLine label="やる気" value={horse.motivation} description="有効出目の上限" />
-        <StatLine label="根性" value={horse.grit} description="HP（超えると脱落）" />
+      <div className="px-4 py-3 space-y-2">
+        <StatLine label="スピード" value={horse.speed} description="この値より大きい出目で行動成功" />
+        <StatLine label="体力" value={horse.hp} description="HP（これ以上ダメージを受けると脱落）" />
+      </div>
+      {/* Mechanic hint */}
+      <div className="px-4 pb-3">
+        <div className="bg-gray-50 rounded-lg px-3 py-1.5 text-xs text-gray-500 text-center">
+          成功確率 <span className="font-bold text-gray-700">{Math.round((6 - horse.speed) / 6 * 100)}%</span>
+          <span className="mx-1.5 text-gray-300">|</span>
+          前進期待値 <span className="font-bold text-gray-700">{expectedAdvance(horse.speed).toFixed(1)}</span> マス/回
+        </div>
       </div>
     </div>
   );
+}
+
+function expectedAdvance(speed: number): number {
+  // E[advance] = sum of die values that beat speed, divided by 6
+  let total = 0;
+  for (let d = 1; d <= 6; d++) {
+    if (d > speed) total += d;
+  }
+  return total / 6;
 }
 
 // ── Equipped horse card (for race/equip screens) ─────────────────────────────
@@ -52,7 +67,8 @@ interface StateCardProps {
 
 export function HorseStateCard({ horse, playerColor, compact, showDamage }: StateCardProps) {
   const stats = getEffectiveStats(horse);
-  const damagePercent = stats.grit > 0 ? Math.min(100, (horse.damage / stats.grit) * 100) : 100;
+  const hpRemaining = Math.max(0, stats.hp - horse.damage);
+  const hpPercent = stats.hp > 0 ? (hpRemaining / stats.hp) * 100 : 0;
 
   return (
     <div className={`rounded-xl border-2 bg-white relative ${horse.fallen ? 'opacity-40 border-gray-200' : 'border-gray-200'}`}>
@@ -63,30 +79,28 @@ export function HorseStateCard({ horse, playerColor, compact, showDamage }: Stat
       )}
       {/* Header */}
       <div className="px-3 py-2 border-b border-gray-100 flex justify-between items-center">
-        <span className={`font-bold text-sm ${compact ? 'text-xs' : ''}`}>{horse.base.name}</span>
+        <span className={`font-bold ${compact ? 'text-xs' : 'text-sm'}`}>{horse.base.name}</span>
         <div className="flex gap-1">
           {horse.soulInherited && <span className="text-[10px] bg-orange-100 text-orange-600 px-1 rounded font-medium">魂</span>}
           {horse.bondInherited && <span className="text-[10px] bg-pink-100 text-pink-600 px-1 rounded font-medium">絆</span>}
         </div>
       </div>
       {/* Stats */}
-      <div className="px-3 py-2 grid grid-cols-2 gap-x-4 gap-y-1">
-        <StatLineEff label="脚力" base={horse.base.ability} eff={stats.ability} description={compact ? undefined : "手番頻度"} />
-        <StatLineEff label="スピード" base={horse.base.speed} eff={stats.speed} description={compact ? undefined : "前進倍率"} />
-        <StatLineEff label="やる気" base={horse.base.motivation} eff={stats.motivation} description={compact ? undefined : "有効出目≤"} />
-        <StatLineEff label="根性" base={horse.base.grit} eff={stats.grit} description={compact ? undefined : "HP"} />
+      <div className="px-3 py-2 space-y-1">
+        <StatLineEff label="スピード" base={horse.base.speed} eff={stats.speed} description={compact ? undefined : "行動成功の閾値"} />
+        <StatLineEff label="体力" base={horse.base.hp} eff={stats.hp} description={compact ? undefined : "HP"} />
       </div>
-      {/* Damage bar */}
+      {/* HP bar */}
       {showDamage && !horse.fallen && (
         <div className="px-3 pb-2">
           <div className="flex justify-between text-xs text-gray-400 mb-0.5">
-            <span>ダメージ</span>
-            <span>{horse.damage}/{stats.grit}</span>
+            <span>体力</span>
+            <span>{hpRemaining} / {stats.hp}</span>
           </div>
-          <div className="w-full bg-gray-100 rounded-full h-1.5">
+          <div className="w-full bg-gray-100 rounded-full h-2">
             <div
-              className={`h-1.5 rounded-full transition-all ${damagePercent >= 75 ? 'bg-red-400' : damagePercent >= 50 ? 'bg-yellow-400' : 'bg-emerald-400'}`}
-              style={{ width: `${damagePercent}%` }}
+              className={`h-2 rounded-full transition-all ${hpPercent <= 33 ? 'bg-red-400' : hpPercent <= 66 ? 'bg-yellow-400' : 'bg-emerald-400'}`}
+              style={{ width: `${hpPercent}%` }}
             />
           </div>
         </div>
@@ -97,8 +111,6 @@ export function HorseStateCard({ horse, playerColor, compact, showDamage }: Stat
           {horse.jockey && <SlotTag label="J" name={horse.jockey.name} />}
           {horse.blinker && <SlotTag label="B" name={horse.blinker.name} />}
           {horse.cheek && <SlotTag label="C" name={horse.cheek.name} />}
-          {stats.extraDice > 0 && <span className="text-[10px] bg-blue-50 text-blue-600 px-1.5 py-0.5 rounded border border-blue-200">サイコロ+{stats.extraDice}</span>}
-          {stats.extraReroll > 0 && <span className="text-[10px] bg-purple-50 text-purple-600 px-1.5 py-0.5 rounded border border-purple-200">リロール+{stats.extraReroll}</span>}
         </div>
       )}
     </div>

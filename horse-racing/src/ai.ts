@@ -58,12 +58,13 @@ function buildAction(state: GameState, cpuIdx: number): GameAction | null {
 // ── Scoring helpers ───────────────────────────────────────────────────────────
 
 function horseScore(h: BaseHorse) {
-  return h.ability * 2 + h.speed * 2 + h.motivation + h.grit;
+  // Lower speed = easier to succeed (more actions); higher hp = more survivable
+  return (5 - h.speed) * 2 + h.hp;
 }
 
 function partScore(p: Part) {
-  return p.abilityMod + p.speedMod + p.motivationMod * 0.5 + p.gritMod * 0.5
-    + p.extraDice * 0.8 + p.extraReroll * 0.6;
+  // Negative speedMod lowers the threshold (good); positive hpMod increases survivability (good)
+  return -p.speedMod * 1.5 + p.hpMod;
 }
 
 // ── Equip phase ───────────────────────────────────────────────────────────────
@@ -99,7 +100,7 @@ function raceAction(state: GameState, cpuIdx: number): GameAction | null {
     // Attack if an opponent can be finished off
     const opponents = state.players.filter((_, i) => i !== cpuIdx);
     const canFinish = opponents.some(p =>
-      p.horses.some(h => !h.fallen && getEffectiveStats(h).grit - h.damage <= stats.ability)
+      p.horses.some(h => !h.fallen && getEffectiveStats(h).hp - h.damage <= 1)
     );
     if (canFinish) return { type: 'DECLARE_ACTION', actionType: 'obstruct' };
 
@@ -118,7 +119,7 @@ function raceAction(state: GameState, cpuIdx: number): GameAction | null {
     let maxRatio = -1;
     state.players[cpuIdx].horses.forEach((h, hi) => {
       if (h.fallen) return;
-      const ratio = h.damage / Math.max(1, getEffectiveStats(h).grit);
+      const ratio = h.damage / Math.max(1, getEffectiveStats(h).hp);
       if (ratio > maxRatio) { maxRatio = ratio; targetIdx = hi; }
     });
     return { type: 'SELECT_DEFENDER_HORSE', horseIndex: targetIdx };
@@ -126,35 +127,28 @@ function raceAction(state: GameState, cpuIdx: number): GameAction | null {
 
   if (sub === 'dice-roll') {
     if (state.attackerPlayerIndex !== cpuIdx) return null;
-    const horse = state.players[cpuIdx].horses[state.attackerHorseIndex!];
-    const motivation = getEffectiveStats(horse).motivation;
-    // Reroll worst die above motivation
-    if (state.rerollsRemaining > 0) {
-      const badIdx = state.diceValues.findIndex((v, i) => v > motivation && !state.diceRerolled[i]);
-      if (badIdx >= 0) return { type: 'REROLL_DIE', dieIndex: badIdx };
-    }
     return { type: 'CONFIRM_DICE' };
   }
 
   if (sub === 'inheritance') {
     if (state.pendingInheritancePlayerIndex !== cpuIdx) return null;
     const fallenIdx = state.pendingInheritanceFallenHorseIndex!;
-    let bestIdx = -1, bestGrit = -1;
+    let bestIdx = -1, bestHp = -1;
     state.players[cpuIdx].horses.forEach((h, hi) => {
       if (h.fallen || hi === fallenIdx || h.soulInherited) return;
-      const g = getEffectiveStats(h).grit;
-      if (g > bestGrit) { bestGrit = g; bestIdx = hi; }
+      const g = getEffectiveStats(h).hp;
+      if (g > bestHp) { bestHp = g; bestIdx = hi; }
     });
     return bestIdx >= 0 ? { type: 'SELECT_INHERITANCE_HORSE', targetHorseIndex: bestIdx } : null;
   }
 
   if (sub === 'bond-inheritance') {
     if (state.pendingBondPlayerIndex !== cpuIdx) return null;
-    let bestIdx = 0, bestGrit = -1;
+    let bestIdx = 0, bestHp = -1;
     state.players[cpuIdx].horses.forEach((h, hi) => {
       if (h.fallen || h.bondInherited) return;
-      const g = getEffectiveStats(h).grit;
-      if (g > bestGrit) { bestGrit = g; bestIdx = hi; }
+      const g = getEffectiveStats(h).hp;
+      if (g > bestHp) { bestHp = g; bestIdx = hi; }
     });
     return { type: 'SELECT_BOND_HORSE', targetHorseIndex: bestIdx };
   }

@@ -1,38 +1,47 @@
 import { BaseHorse, Part, PlayerColor } from './types';
 
+// speed = dice threshold (lower is easier / faster)
+// hp    = health points
 export const BASE_HORSES_HONMEI: BaseHorse[] = [
-  { id: 'h-a', name: '本命馬A', ability: 2, speed: 2, motivation: 4, grit: 4, type: 'honmei' },
-  { id: 'h-b', name: '本命馬B', ability: 3, speed: 1, motivation: 3, grit: 5, type: 'honmei' },
-  { id: 'h-c', name: '本命馬C', ability: 2, speed: 3, motivation: 3, grit: 3, type: 'honmei' },
-  { id: 'h-d', name: '本命馬D', ability: 1, speed: 2, motivation: 5, grit: 6, type: 'honmei' },
+  { id: 'h-a', name: '本命馬A', speed: 2, hp: 4, type: 'honmei' },
+  { id: 'h-b', name: '本命馬B', speed: 1, hp: 3, type: 'honmei' },
+  { id: 'h-c', name: '本命馬C', speed: 3, hp: 5, type: 'honmei' },
+  { id: 'h-d', name: '本命馬D', speed: 2, hp: 5, type: 'honmei' },
 ];
 
 export const BASE_HORSES_TAIKOU: BaseHorse[] = [
-  { id: 't-x', name: '対抗馬X', ability: 3, speed: 2, motivation: 3, grit: 3, type: 'taikou' },
-  { id: 't-y', name: '対抗馬Y', ability: 2, speed: 1, motivation: 4, grit: 5, type: 'taikou' },
-  { id: 't-z', name: '対抗馬Z', ability: 1, speed: 3, motivation: 5, grit: 4, type: 'taikou' },
-  { id: 't-w', name: '対抗馬W', ability: 2, speed: 2, motivation: 3, grit: 4, type: 'taikou' },
+  { id: 't-x', name: '対抗馬X', speed: 2, hp: 3, type: 'taikou' },
+  { id: 't-y', name: '対抗馬Y', speed: 3, hp: 4, type: 'taikou' },
+  { id: 't-z', name: '対抗馬Z', speed: 1, hp: 2, type: 'taikou' },
+  { id: 't-w', name: '対抗馬W', speed: 2, hp: 3, type: 'taikou' },
 ];
 
+// speedMod: negative = easier to succeed (lower threshold), positive = harder
+// hpMod: positive = more durable
 export const ALL_PARTS: Part[] = [
-  { id: 'j1', slot: 'jockey', name: '名騎手',     abilityMod: 0,  speedMod: 1,  motivationMod: 0,  gritMod: 2,  extraDice: 0, extraReroll: 0 },
-  { id: 'j2', slot: 'jockey', name: '軽量騎手',   abilityMod: 1,  speedMod: 0,  motivationMod: 0,  gritMod: -1, extraDice: 1, extraReroll: 0 },
-  { id: 'j3', slot: 'jockey', name: '熟練騎手',   abilityMod: 0,  speedMod: 1,  motivationMod: 1,  gritMod: -1, extraDice: 0, extraReroll: 0 },
-  { id: 'j4', slot: 'jockey', name: '強引な騎手', abilityMod: 1,  speedMod: 0,  motivationMod: 0,  gritMod: -2, extraDice: 1, extraReroll: 0 },
-  { id: 'j5', slot: 'jockey', name: '守備騎手',   abilityMod: -1, speedMod: 0,  motivationMod: 0,  gritMod: 3,  extraDice: 0, extraReroll: 0 },
-  { id: 'j6', slot: 'jockey', name: '闘志の騎手', abilityMod: 0,  speedMod: 0,  motivationMod: 2,  gritMod: -1, extraDice: 0, extraReroll: 0 },
-  { id: 'b1', slot: 'blinker', name: '標準ブリンカー',   abilityMod: 0,  speedMod: 0,  motivationMod: 1,  gritMod: 0,  extraDice: 0, extraReroll: 0 },
-  { id: 'b2', slot: 'blinker', name: '強制ブリンカー',   abilityMod: -1, speedMod: 0,  motivationMod: 2,  gritMod: 0,  extraDice: 0, extraReroll: 0 },
-  { id: 'b3', slot: 'blinker', name: 'ハーフブリンカー', abilityMod: 0,  speedMod: 1,  motivationMod: -1, gritMod: 0,  extraDice: 1, extraReroll: 0 },
-  { id: 'b4', slot: 'blinker', name: 'チューブブリンカー', abilityMod: 0, speedMod: 0, motivationMod: -1, gritMod: 2,  extraDice: 0, extraReroll: 0 },
-  { id: 'b5', slot: 'blinker', name: 'クロスブリンカー', abilityMod: 1,  speedMod: -1, motivationMod: 0,  gritMod: 0,  extraDice: 0, extraReroll: 1 },
-  { id: 'b6', slot: 'blinker', name: 'フルブリンカー',   abilityMod: 0,  speedMod: 2,  motivationMod: 0,  gritMod: -2, extraDice: 0, extraReroll: 0 },
-  { id: 'c1', slot: 'cheek', name: '標準チーク', abilityMod: 0,  speedMod: 0,  motivationMod: 0,  gritMod: 1,  extraDice: 0, extraReroll: 0 },
-  { id: 'c2', slot: 'cheek', name: '強化チーク', abilityMod: 0,  speedMod: -1, motivationMod: 0,  gritMod: 2,  extraDice: 0, extraReroll: 0 },
-  { id: 'c3', slot: 'cheek', name: '軽量チーク', abilityMod: 0,  speedMod: 1,  motivationMod: 0,  gritMod: -1, extraDice: 1, extraReroll: 0 },
-  { id: 'c4', slot: 'cheek', name: '革製チーク', abilityMod: -1, speedMod: 0,  motivationMod: 1,  gritMod: 1,  extraDice: 0, extraReroll: 0 },
-  { id: 'c5', slot: 'cheek', name: '金属チーク', abilityMod: 0,  speedMod: 0,  motivationMod: -1, gritMod: 3,  extraDice: 0, extraReroll: 0 },
-  { id: 'c6', slot: 'cheek', name: '試作チーク', abilityMod: 1,  speedMod: 0,  motivationMod: 0,  gritMod: -2, extraDice: 0, extraReroll: 1 },
+  // Jockeys
+  { id: 'j1', slot: 'jockey', name: '名騎手',     speedMod:  0, hpMod: +2 },
+  { id: 'j2', slot: 'jockey', name: '軽量騎手',   speedMod: -1, hpMod: -1 },
+  { id: 'j3', slot: 'jockey', name: '熟練騎手',   speedMod: -1, hpMod:  0 },
+  { id: 'j4', slot: 'jockey', name: '強引な騎手', speedMod: +1, hpMod: -1 },
+  { id: 'j5', slot: 'jockey', name: '守備騎手',   speedMod: +1, hpMod: +2 },
+  { id: 'j6', slot: 'jockey', name: '闘志の騎手', speedMod: -1, hpMod: +1 },
+
+  // Blinkers
+  { id: 'b1', slot: 'blinker', name: '標準ブリンカー',    speedMod: -1, hpMod:  0 },
+  { id: 'b2', slot: 'blinker', name: '強制ブリンカー',    speedMod: -2, hpMod: +1 },
+  { id: 'b3', slot: 'blinker', name: 'ハーフブリンカー',  speedMod: -1, hpMod: -1 },
+  { id: 'b4', slot: 'blinker', name: 'チューブブリンカー',speedMod:  0, hpMod: +2 },
+  { id: 'b5', slot: 'blinker', name: 'クロスブリンカー',  speedMod: +1, hpMod: +1 },
+  { id: 'b6', slot: 'blinker', name: 'フルブリンカー',    speedMod: +2, hpMod: -1 },
+
+  // Cheeks
+  { id: 'c1', slot: 'cheek', name: '標準チーク', speedMod:  0, hpMod: +1 },
+  { id: 'c2', slot: 'cheek', name: '強化チーク', speedMod:  0, hpMod: +2 },
+  { id: 'c3', slot: 'cheek', name: '軽量チーク', speedMod: -1, hpMod: -1 },
+  { id: 'c4', slot: 'cheek', name: '革製チーク', speedMod: -1, hpMod: +1 },
+  { id: 'c5', slot: 'cheek', name: '金属チーク', speedMod: +1, hpMod: +2 },
+  { id: 'c6', slot: 'cheek', name: '試作チーク', speedMod: +2, hpMod: -2 },
 ];
 
 export const PLAYER_COLORS: PlayerColor[] = ['red', 'green', 'black', 'purple'];

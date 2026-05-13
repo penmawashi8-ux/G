@@ -22,7 +22,6 @@ export type RaceSubPhase =
   | 'action-declare'
   | 'target-declare'
   | 'dice-roll'
-  | 'reroll'
   | 'resolve'
   | 'inheritance'
   | 'bond-inheritance'
@@ -31,10 +30,10 @@ export type RaceSubPhase =
 export interface BaseHorse {
   id: string;
   name: string;
-  ability: number;
+  /** Dice threshold: roll 1d6, succeed if die > speed. Lower = easier to succeed. */
   speed: number;
-  motivation: number;
-  grit: number;
+  /** Health points. Eliminated when accumulated damage >= hp. */
+  hp: number;
   type: HorseType;
 }
 
@@ -42,12 +41,8 @@ export interface Part {
   id: string;
   slot: SlotType;
   name: string;
-  abilityMod: number;
   speedMod: number;
-  motivationMod: number;
-  gritMod: number;
-  extraDice: number;
-  extraReroll: number;
+  hpMod: number;
 }
 
 export interface HorseState {
@@ -63,12 +58,8 @@ export interface HorseState {
 }
 
 export interface EffectiveStats {
-  ability: number;
   speed: number;
-  motivation: number;
-  grit: number;
-  extraDice: number;
-  extraReroll: number;
+  hp: number;
 }
 
 export interface Player {
@@ -129,10 +120,8 @@ export interface GameState {
   defenderHorseIndex: number | null;
   declaredAction: ActionType | null;
 
-  // Dice
+  // Single die roll
   diceValues: number[];
-  diceRerolled: boolean[];
-  rerollsRemaining: number;
 
   // Inheritance
   pendingInheritancePlayerIndex: number | null;

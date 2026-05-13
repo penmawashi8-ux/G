@@ -89,7 +89,7 @@ export default function EquipScreen({ state, dispatch, myTurn = true }: Props) {
 
         <div className={`p-3 rounded-xl border-2 text-center mb-4 ${COLOR_CLASS[player.color]}`}>
           <p className="text-white font-bold">{player.name} — 馬にパーツを装備してください</p>
-          <p className="text-white/80 text-xs mt-0.5">手札: {player.parts.length}枚 | 各スロット最大1枚 | やる気・根性・脚力が0以下になる装備は禁止</p>
+          <p className="text-white/80 text-xs mt-0.5">手札: {player.parts.length}枚 | 各スロット最大1枚 | スピード・体力が0以下になる装備は禁止</p>
         </div>
 
         {/* Horse selector */}
@@ -116,17 +116,9 @@ export default function EquipScreen({ state, dispatch, myTurn = true }: Props) {
           <div className="bg-white rounded-xl p-4">
             <h3 className="font-bold text-gray-700 mb-3">{horse.base.name} のステータス</h3>
             <div className="grid grid-cols-2 gap-2 mb-3">
-              <StatDiff label="脚力" base={horse.base.ability} eff={stats.ability} icon="⚡" />
               <StatDiff label="スピード" base={horse.base.speed} eff={stats.speed} icon="💨" />
-              <StatDiff label="やる気" base={horse.base.motivation} eff={stats.motivation} icon="🔥" />
-              <StatDiff label="根性" base={horse.base.grit} eff={stats.grit} icon="❤️" />
+              <StatDiff label="体力" base={horse.base.hp} eff={stats.hp} icon="❤️" />
             </div>
-            {(stats.extraDice > 0 || stats.extraReroll > 0) && (
-              <div className="flex gap-2 text-xs">
-                {stats.extraDice > 0 && <span className="bg-blue-100 text-blue-700 px-2 py-1 rounded">🎲 サイコロ+{stats.extraDice}</span>}
-                {stats.extraReroll > 0 && <span className="bg-purple-100 text-purple-700 px-2 py-1 rounded">↺ リロール+{stats.extraReroll}</span>}
-              </div>
-            )}
 
             {/* Equipped parts */}
             <div className="mt-3 space-y-2">
@@ -181,12 +173,8 @@ export default function EquipScreen({ state, dispatch, myTurn = true }: Props) {
                             </div>
                             <div className="flex flex-wrap gap-1 mt-0.5">
                               {[
-                                part.abilityMod !== 0 && `脚力${part.abilityMod>0?'+':''}${part.abilityMod}`,
                                 part.speedMod !== 0 && `速${part.speedMod>0?'+':''}${part.speedMod}`,
-                                part.motivationMod !== 0 && `気${part.motivationMod>0?'+':''}${part.motivationMod}`,
-                                part.gritMod !== 0 && `根${part.gritMod>0?'+':''}${part.gritMod}`,
-                                part.extraDice > 0 && `🎲+${part.extraDice}`,
-                                part.extraReroll > 0 && `↺+${part.extraReroll}`,
+                                part.hpMod !== 0 && `体力${part.hpMod>0?'+':''}${part.hpMod}`,
                               ].filter(Boolean).map((m, i) => (
                                 <span key={i} className="text-xs text-gray-500">{m}</span>
                               ))}

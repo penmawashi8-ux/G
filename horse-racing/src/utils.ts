@@ -18,22 +18,23 @@ export function rollDice(count: number): number[] {
 }
 
 export function getEffectiveStats(horse: HorseState): EffectiveStats {
-  const inheritBonus = (horse.soulInherited ? 1 : 0) + (horse.bondInherited ? 1 : 0);
+  const hpBonus = (horse.soulInherited ? 1 : 0) + (horse.bondInherited ? 1 : 0);
   const parts = [horse.jockey, horse.blinker, horse.cheek].filter(Boolean) as Part[];
   return {
-    ability: horse.base.ability + parts.reduce((s, p) => s + p.abilityMod, 0),
     speed: horse.base.speed + parts.reduce((s, p) => s + p.speedMod, 0),
-    motivation: horse.base.motivation + parts.reduce((s, p) => s + p.motivationMod, 0) + inheritBonus,
-    grit: horse.base.grit + parts.reduce((s, p) => s + p.gritMod, 0) + inheritBonus,
-    extraDice: parts.reduce((s, p) => s + p.extraDice, 0),
-    extraReroll: parts.reduce((s, p) => s + p.extraReroll, 0),
+    hp: horse.base.hp + parts.reduce((s, p) => s + p.hpMod, 0) + hpBonus,
   };
+}
+
+/** Returns true when the die result beats the speed threshold (die > speed). */
+export function isDiceSuccess(dieValue: number, speed: number): boolean {
+  return dieValue > speed;
 }
 
 export function isEquipValid(horse: HorseState, slot: keyof Pick<HorseState, 'jockey' | 'blinker' | 'cheek'>, part: Part | undefined): boolean {
   const testHorse: HorseState = { ...horse, [slot]: part };
   const stats = getEffectiveStats(testHorse);
-  return stats.ability >= 1 && stats.motivation >= 1 && stats.grit >= 1;
+  return stats.speed >= 1 && stats.hp >= 1;
 }
 
 export function buildInitiativeDeck(players: Player[]): InitiativeCard[] {
@@ -41,26 +42,11 @@ export function buildInitiativeDeck(players: Player[]): InitiativeCard[] {
   players.forEach((player, playerIndex) => {
     player.horses.forEach((horse, horseIndex) => {
       if (horse.fallen) return;
-      const stats = getEffectiveStats(horse);
-      const ability = Math.max(0, stats.ability);
-      if (ability === 0) return;
-
-      const leftCount = Math.floor(ability / 2) + (ability % 2 === 1 && Math.random() < 0.5 ? 1 : 0);
-      const rightCount = ability - leftCount;
-
-      for (let i = 0; i < leftCount; i++) {
-        cards.push({ id: `${playerIndex}-${horseIndex}-L${i}`, playerIndex, horseIndex, direction: 'left' });
-      }
-      for (let i = 0; i < rightCount; i++) {
-        cards.push({ id: `${playerIndex}-${horseIndex}-R${i}`, playerIndex, horseIndex, direction: 'right' });
-      }
+      const direction = Math.random() < 0.5 ? 'left' : ('right' as 'left' | 'right');
+      cards.push({ id: `${playerIndex}-${horseIndex}-0`, playerIndex, horseIndex, direction });
     });
   });
   return shuffleArray(cards);
-}
-
-export function countValidDice(values: number[], motivation: number): number {
-  return values.filter(v => v <= motivation).length;
 }
 
 export function getSlotLabel(slot: string): string {

@@ -1,14 +1,14 @@
 import {
-  GameState, GamePhase, Player, HorseState, Part, BaseHorse,
-  InitiativeCard, ActionType, SlotType, GameMode, PlayerType,
+  GameState, Player, HorseState, Part, BaseHorse,
+  ActionType, SlotType, GameMode, PlayerType,
 } from './types';
 import {
   BASE_HORSES_HONMEI, BASE_HORSES_TAIKOU, ALL_PARTS,
   PLAYER_COLORS, PLAYER_NAMES,
 } from './data';
 import {
-  shuffleArray, rollDie, rollDice, getEffectiveStats,
-  buildInitiativeDeck, countValidDice,
+  shuffleArray, rollDie, getEffectiveStats,
+  buildInitiativeDeck, isDiceSuccess,
 } from './utils';
 
 // ─── Actions ────────────────────────────────────────────────────────────────
@@ -33,8 +33,6 @@ export type GameAction =
   | { type: 'DRAW_INITIATIVE' }
   | { type: 'DECLARE_ACTION'; actionType: ActionType }
   | { type: 'SELECT_DEFENDER_HORSE'; horseIndex: number }
-  | { type: 'ROLL_DICE' }
-  | { type: 'REROLL_DIE'; dieIndex: number }
   | { type: 'CONFIRM_DICE' }
   | { type: 'SELECT_INHERITANCE_HORSE'; targetHorseIndex: number }
   | { type: 'SELECT_BOND_HORSE'; targetHorseIndex: number }
@@ -73,8 +71,6 @@ export const initialState: GameState = {
   defenderHorseIndex: null,
   declaredAction: null,
   diceValues: [],
-  diceRerolled: [],
-  rerollsRemaining: 0,
   pendingInheritancePlayerIndex: null,
   pendingInheritanceFallenHorseIndex: null,
   pendingBondPlayerIndex: null,
@@ -97,7 +93,6 @@ function addLog(state: GameState, msg: string): GameState {
 function checkVictory(state: GameState): GameState {
   const { players, raceDistance, teamMode } = state;
 
-  // Goal reached
   for (let pi = 0; pi < players.length; pi++) {
     for (const h of players[pi].horses) {
       if (!h.fallen && h.position >= raceDistance) {
@@ -115,7 +110,6 @@ function checkVictory(state: GameState): GameState {
     }
   }
 
-  // Elimination
   if (teamMode) {
     const teamActive = [0, 1].map(tid =>
       players.filter(p => p.teamId === tid).flatMap(p => p.horses).filter(h => !h.fallen).length
@@ -140,7 +134,6 @@ function checkVictory(state: GameState): GameState {
 }
 
 function applyFallAndContinue(state: GameState, victimPlayerIndex: number, victimHorseIndex: number): GameState {
-  // Mark horse as fallen, clear damage
   const newPlayers = state.players.map((p, pi) => {
     if (pi !== victimPlayerIndex) return p;
     return {
@@ -148,13 +141,9 @@ function applyFallAndContinue(state: GameState, victimPlayerIndex: number, victi
       horses: p.horses.map((h, hi) => hi === victimHorseIndex ? { ...h, fallen: true, damage: 0 } : h),
     };
   });
-  let s: GameState = {
-    ...state,
-    players: newPlayers,
-  };
+  let s: GameState = { ...state, players: newPlayers };
   s = addLog(s, `💀 ${state.players[victimPlayerIndex].name}の${state.players[victimPlayerIndex].horses[victimHorseIndex].base.name}が脱落！`);
 
-  // Check victory first
   const afterVictory = checkVictory(s);
   if (afterVictory.phase === 'game-over') return afterVictory;
 
@@ -162,7 +151,6 @@ function applyFallAndContinue(state: GameState, victimPlayerIndex: number, victi
   const otherHorses = victim.horses.filter((h, hi) => hi !== victimHorseIndex && !h.fallen);
 
   if (otherHorses.length > 0) {
-    // Soul inheritance
     return {
       ...s,
       raceSubPhase: 'inheritance',
@@ -171,8 +159,6 @@ function applyFallAndContinue(state: GameState, victimPlayerIndex: number, victi
     };
   }
 
-  // All of this player's horses are fallen
-  // Check bond inheritance (team mode)
   if (s.teamMode) {
     const teamId = victim.teamId;
     const teammate = s.players.find(p => p.teamId === teamId && p.id !== victim.id);
@@ -363,7 +349,8 @@ export function gameReducer(state: GameState, action: GameAction): GameState {
       const newPicksDone = state.partsPicksDone + 1;
       const totalPicks = 2 * state.playerCount;
       const nextIndex = (state.startPlayerIndex + newPicksDone) % state.playerCount;
-      const log = `${state.players[pi].name}が${part.name}（${part.slot === 'jockey' ? 'J' : part.slot === 'blinker' ? 'B' : 'C'}）を選択`;
+      const slot = part.slot === 'jockey' ? 'J' : part.slot === 'blinker' ? 'B' : 'C';
+      const log = `${state.players[pi].name}が${part.name}（${slot}）を選択`;
 
       if (newPicksDone >= totalPicks) {
         if (state.partsPhase === 'front') {
@@ -376,7 +363,6 @@ export function gameReducer(state: GameState, action: GameAction): GameState {
             currentDraftPlayerIndex: state.startPlayerIndex,
           }, log);
         } else {
-          // Done with all parts — go to equip
           return addLog({
             ...state,
             players: newPlayers,
@@ -399,23 +385,20 @@ export function gameReducer(state: GameState, action: GameAction): GameState {
       const { horseIndex, slot, partId } = action;
       const pi = state.currentEquipPlayerIndex;
       const part = state.players[pi].parts.find(p => p.id === partId)!;
-
-      // Build test horse to validate
       const horse = state.players[pi].horses[horseIndex];
       const testHorse: HorseState = { ...horse, [slot]: part };
       const stats = getEffectiveStats(testHorse);
-      if (stats.ability < 1 || stats.motivation < 1 || stats.grit < 1) return state;
+      if (stats.speed < 1 || stats.hp < 1) return state;
 
       const newPlayers = state.players.map((p, i) => {
         if (i !== pi) return p;
         const newHorses = p.horses.map((h, hi) =>
           hi === horseIndex ? { ...h, [slot]: part } : h
         );
-        // Remove part from unequipped parts only if it was unequipped before
         const oldHorse = p.horses[horseIndex];
         const oldPart = oldHorse[slot as keyof HorseState] as Part | undefined;
         let newParts = p.parts.filter(pp => pp.id !== partId);
-        if (oldPart) newParts = [...newParts, oldPart]; // return old part
+        if (oldPart) newParts = [...newParts, oldPart];
         return { ...p, horses: newHorses, parts: newParts };
       });
       return { ...state, players: newPlayers };
@@ -443,7 +426,6 @@ export function gameReducer(state: GameState, action: GameAction): GameState {
       const nextEquipIndex = pi + 1;
 
       if (nextEquipIndex >= state.playerCount) {
-        // Build initiative deck and start race
         const deck = buildInitiativeDeck(state.players);
         return addLog({
           ...state,
@@ -462,7 +444,7 @@ export function gameReducer(state: GameState, action: GameAction): GameState {
       let deck = [...s.initiativeDeck];
       let discard = [...s.initiativeDiscard];
 
-      let drawnCard: InitiativeCard | null = null;
+      let drawnCard = null;
       while (deck.length > 0) {
         const card = deck.shift()!;
         const horse = s.players[card.playerIndex]?.horses[card.horseIndex];
@@ -471,11 +453,9 @@ export function gameReducer(state: GameState, action: GameAction): GameState {
           discard = [...discard, card];
           break;
         }
-        // Fallen horse card: permanently discard (don't add to discard pile)
       }
 
       if (!drawnCard) {
-        // Rebuild and try again (shouldn't normally happen)
         const activeCards = discard.filter(c => {
           const h = s.players[c.playerIndex]?.horses[c.horseIndex];
           return h && !h.fallen;
@@ -503,7 +483,7 @@ export function gameReducer(state: GameState, action: GameAction): GameState {
           : (attackerPlayerIndex - 1 + s.playerCount) % s.playerCount;
 
       const attackerHorse = s.players[attackerPlayerIndex].horses[attackerHorseIndex];
-      const log = `【${s.players[attackerPlayerIndex].name}】${attackerHorse.base.name}の手番 (${direction === 'right' ? '右' : '左'})`;
+      const log = `【${s.players[attackerPlayerIndex].name}】${attackerHorse.base.name}の手番`;
 
       return addLog({
         ...s,
@@ -522,58 +502,26 @@ export function gameReducer(state: GameState, action: GameAction): GameState {
     case 'DECLARE_ACTION': {
       const { actionType } = action;
       if (actionType === 'advance') {
-        // Roll dice immediately (no target needed)
-        const attacker = state.players[state.attackerPlayerIndex!];
-        const horse = attacker.horses[state.attackerHorseIndex!];
-        const stats = getEffectiveStats(horse);
-        const diceCount = Math.max(1, stats.ability + stats.extraDice);
-        const values = rollDice(diceCount);
+        // Roll 1 die immediately
+        const die = rollDie();
         return {
           ...state,
           declaredAction: 'advance',
-          diceValues: values,
-          diceRerolled: new Array(diceCount).fill(false),
-          rerollsRemaining: stats.extraReroll,
+          diceValues: [die],
           raceSubPhase: 'dice-roll',
         };
       } else {
-        // Need defender to select horse
-        return {
-          ...state,
-          declaredAction: 'obstruct',
-          raceSubPhase: 'target-declare',
-        };
+        return { ...state, declaredAction: 'obstruct', raceSubPhase: 'target-declare' };
       }
     }
 
     case 'SELECT_DEFENDER_HORSE': {
-      const attacker = state.players[state.attackerPlayerIndex!];
-      const horse = attacker.horses[state.attackerHorseIndex!];
-      const stats = getEffectiveStats(horse);
-      const diceCount = Math.max(1, stats.ability + stats.extraDice);
-      const values = rollDice(diceCount);
+      const die = rollDie();
       return {
         ...state,
         defenderHorseIndex: action.horseIndex,
-        diceValues: values,
-        diceRerolled: new Array(diceCount).fill(false),
-        rerollsRemaining: stats.extraReroll,
+        diceValues: [die],
         raceSubPhase: 'dice-roll',
-      };
-    }
-
-    case 'REROLL_DIE': {
-      const { dieIndex } = action;
-      if (state.diceRerolled[dieIndex] || state.rerollsRemaining <= 0) return state;
-      const newValues = [...state.diceValues];
-      newValues[dieIndex] = rollDie();
-      const newRerolled = [...state.diceRerolled];
-      newRerolled[dieIndex] = true;
-      return {
-        ...state,
-        diceValues: newValues,
-        diceRerolled: newRerolled,
-        rerollsRemaining: state.rerollsRemaining - 1,
       };
     }
 
@@ -581,10 +529,11 @@ export function gameReducer(state: GameState, action: GameAction): GameState {
       const attackerPlayer = state.players[state.attackerPlayerIndex!];
       const attackerHorse = attackerPlayer.horses[state.attackerHorseIndex!];
       const stats = getEffectiveStats(attackerHorse);
-      const validCount = countValidDice(state.diceValues, stats.motivation);
+      const die = state.diceValues[0];
+      const success = isDiceSuccess(die, stats.speed);
 
       if (state.declaredAction === 'advance') {
-        const advance = validCount * stats.speed;
+        const advance = success ? die : 0;
         const newPos = attackerHorse.position + advance;
         const newPlayers = state.players.map((p, pi) => {
           if (pi !== state.attackerPlayerIndex) return p;
@@ -595,15 +544,16 @@ export function gameReducer(state: GameState, action: GameAction): GameState {
             ),
           };
         });
-        const log = `→ 有効サイコロ${validCount}個 × スピード${stats.speed} = ${advance}マス前進 (位置: ${newPos})`;
+        const log = success
+          ? `→ 出目${die} > スピード${stats.speed} 成功！ ${die}マス前進 → 位置${newPos}`
+          : `→ 出目${die} ≤ スピード${stats.speed} 失敗… 前進できず`;
         let s = addLog({ ...state, players: newPlayers, raceSubPhase: 'resolve' }, log);
         s = checkVictory(s);
         if (s.phase === 'game-over') return s;
         return { ...s, raceSubPhase: 'resolve' };
 
       } else {
-        // Obstruct
-        const damage = validCount;
+        const damage = success ? 1 : 0;
         const defPI = state.defenderPlayerIndex!;
         const defHI = state.defenderHorseIndex!;
         const defHorse = state.players[defPI].horses[defHI];
@@ -619,11 +569,14 @@ export function gameReducer(state: GameState, action: GameAction): GameState {
             ),
           };
         });
-        const log = `→ 有効サイコロ${validCount}個のダメージ → ${defHorse.base.name}の根性: ${defHorse.damage}+${damage}=${newDamage}/${defStats.grit}`;
+
+        const log = success
+          ? `→ 出目${die} > スピード${stats.speed} 成功！ ${defHorse.base.name}に1ダメージ（体力: ${defHorse.damage}+1=${newDamage}/${defStats.hp}）`
+          : `→ 出目${die} ≤ スピード${stats.speed} 失敗… ダメージなし`;
+
         let s = addLog({ ...state, players: newPlayers, raceSubPhase: 'resolve' }, log);
 
-        if (newDamage >= defStats.grit) {
-          // Horse eliminated
+        if (success && newDamage >= defStats.hp) {
           s = applyFallAndContinue(s, defPI, defHI);
           if (s.phase === 'game-over') return s;
           return s;
@@ -642,15 +595,13 @@ export function gameReducer(state: GameState, action: GameAction): GameState {
         return {
           ...p,
           horses: p.horses.map((h, hi) =>
-            hi === targetHorseIndex
-              ? { ...h, soulInherited: true }
-              : h
+            hi === targetHorseIndex ? { ...h, soulInherited: true } : h
           ),
         };
       });
       const fallenName = state.players[pi].horses[fallenHI].base.name;
       const targetName = state.players[pi].horses[targetHorseIndex].base.name;
-      const log = `💫 気合の継承: ${fallenName} → ${targetName}（やる気・根性+1）`;
+      const log = `💫 気合の継承: ${fallenName} → ${targetName}（体力+1）`;
 
       let s = addLog({
         ...state,
@@ -660,9 +611,7 @@ export function gameReducer(state: GameState, action: GameAction): GameState {
         raceSubPhase: 'draw-initiative',
       }, log);
 
-      // After inheritance, check if there's bond inheritance pending
       if (s.teamMode) {
-        // Check if the player who just inherited's whole team's other member is fully fallen
         const player = s.players[pi];
         const teamId = player.teamId;
         const teammate = s.players.find(p => p.teamId === teamId && p.id !== pi);
@@ -692,20 +641,17 @@ export function gameReducer(state: GameState, action: GameAction): GameState {
 
       const newPlayers = state.players.map((p, i) => {
         if (i !== pi) return p;
-        // Mark bond inheritance used on the teammate
         return {
           ...p,
           bondInheritanceUsed: true,
           horses: p.horses.map((h, hi) =>
-            hi === targetHorseIndex
-              ? { ...h, bondInherited: true }
-              : h
+            hi === targetHorseIndex ? { ...h, bondInherited: true } : h
           ),
         };
       });
 
       const targetName = state.players[pi].horses[targetHorseIndex].base.name;
-      const log = `💛 絆の継承: ${state.players[pi].name}の${targetName}（やる気・根性+1）`;
+      const log = `💛 絆の継承: ${state.players[pi].name}の${targetName}（体力+1）`;
 
       return addLog({
         ...state,
