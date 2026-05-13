@@ -184,9 +184,9 @@ export default function RaceScreen({ state, dispatch, myTurn = true }: Props) {
                       </button>
                       <button
                         onClick={() => dispatch({ type: 'DECLARE_ACTION', actionType: 'obstruct' })}
-                        className="p-4 bg-red-50 border-2 border-red-400 rounded-xl hover:bg-red-100 transition-all hover:scale-105 text-center italic skew-x-6"
+                        className="p-4 bg-red-50 border-2 border-red-400 rounded-xl hover:bg-red-100 transition-all hover:scale-105 text-center"
                       >
-                        <div className="font-bold text-red-700">妨害</div>
+                        <div className="font-bold text-red-700">斜行</div>
                         <div className="text-xs text-gray-500 mt-1">
                           相手の馬に有効出目分ダメージ
                         </div>
@@ -199,7 +199,7 @@ export default function RaceScreen({ state, dispatch, myTurn = true }: Props) {
                 {sub === 'target-declare' && defender && (
                   <div>
                     <p className="text-center text-gray-700 font-medium mb-3">
-                      {defender.name} — 妨害を受ける馬を選んでください
+                      {defender.name} — 斜行を受ける馬を選んでください
                     </p>
                     <div className="grid grid-cols-2 gap-3">
                       {defender.horses.map((h, hi) => {
