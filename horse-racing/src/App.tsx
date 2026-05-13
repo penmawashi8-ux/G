@@ -87,11 +87,24 @@ export default function App() {
 
   // ── CPU auto-play ──────────────────────────────────────────────────────────
   useEffect(() => {
-    if (state.gameMode !== 'cpu') return;
+    // Local CPU battle: always auto-play.
+    // Online battle: only host (player index 0) auto-plays CPU slots to avoid duplicate actions.
+    const shouldHandleCpu = state.gameMode === 'cpu' || (state.gameMode === 'online' && state.localPlayerIndex === 0);
+    if (!shouldHandleCpu) return;
+
     const action = getCpuAction(state);
     if (!action) return;
-    const delay = state.phase === 'race' ? 600 : 300;
-    const timer = setTimeout(() => { dispatch(action); }, delay);
+
+    const baseDelay = state.phase === 'race' ? 1200 : 700;
+    const jitter = Math.floor(Math.random() * 250);
+    const timer = setTimeout(() => {
+      if (state.gameMode === 'online') {
+        void syncedDispatch(action);
+      } else {
+        dispatch(action);
+      }
+    }, baseDelay + jitter);
+
     return () => clearTimeout(timer);
   }, [
     state.gameMode,
@@ -104,6 +117,9 @@ export default function App() {
     state.pendingInheritancePlayerIndex,
     state.pendingBondPlayerIndex,
     state.diceValues,
+    state.localPlayerIndex,
+    state.onlineRoomCode,
+    syncedDispatch,
   ]);
 
   // ── isMyTurn ───────────────────────────────────────────────────────────────
