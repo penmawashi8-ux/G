@@ -1,8 +1,8 @@
-import React from 'react';
-import { GameState, Part } from '../types';
+import React, { useState } from 'react';
+import { GameState, Part, HorseState } from '../types';
 import { GameAction } from '../gameReducer';
 import { COLOR_CLASS, COLOR_LABEL } from '../data';
-import { getSlotLabel } from '../utils';
+import { getSlotLabel, getEffectiveStats } from '../utils';
 
 interface Props {
   state: GameState;
@@ -16,7 +16,158 @@ const SLOT_COLOR: Record<string, string> = {
   cheek: 'bg-purple-50 border-purple-200 text-purple-800',
 };
 
-function PartCard({ part, onClick, selected }: { part: Part; onClick?: () => void; selected?: boolean }) {
+// ── Per-stat row in simulation panel ─────────────────────────────────────────
+
+function StatSimRow({ label, desc, before, after }: { label: string; desc: string; before: number; after: number }) {
+  const diff = after - before;
+  const changed = diff !== 0;
+  return (
+    <div className={`flex items-center justify-between px-2 py-1.5 rounded-lg ${
+      changed ? (diff > 0 ? 'bg-emerald-100' : 'bg-red-100') : 'bg-white/60'
+    }`}>
+      <div className="flex flex-col">
+        <span className="text-xs font-medium text-gray-700">{label}</span>
+        <span className="text-[10px] text-gray-400 leading-tight">{desc}</span>
+      </div>
+      <div className="flex items-center gap-1.5">
+        <span className="text-xs text-gray-400 tabular-nums">{before}</span>
+        {changed ? (
+          <>
+            <span className="text-gray-300 text-xs">→</span>
+            <span className={`text-sm font-bold tabular-nums ${diff > 0 ? 'text-emerald-700' : 'text-red-600'}`}>
+              {after}
+              <span className="text-[11px] font-normal ml-0.5">({diff > 0 ? '+' : ''}{diff})</span>
+            </span>
+          </>
+        ) : (
+          <span className="text-xs font-bold text-gray-600 tabular-nums">{after}</span>
+        )}
+      </div>
+    </div>
+  );
+}
+
+// ── Simulation card for one horse ─────────────────────────────────────────────
+
+function HorseSimCard({ horse, part }: { horse: HorseState; part: Part }) {
+  const before = getEffectiveStats(horse);
+  const testHorse = { ...horse, [part.slot]: part };
+  const after = getEffectiveStats(testHorse);
+  const isInvalid = after.ability < 1 || after.motivation < 1 || after.grit < 1;
+  const extraDiceDiff = after.extraDice - before.extraDice;
+  const extraRerollDiff = after.extraReroll - before.extraReroll;
+
+  return (
+    <div className={`rounded-xl border-2 p-3 ${isInvalid ? 'border-red-300 bg-red-50' : 'border-gray-200 bg-gray-50'}`}>
+      <div className="flex items-center justify-between mb-2">
+        <p className="font-bold text-gray-800 text-sm">🏇 {horse.base.name}</p>
+        {isInvalid && <span className="text-xs text-red-600 font-semibold bg-red-100 px-2 py-0.5 rounded-full">⚠️ 装備不可</span>}
+      </div>
+      <div className="space-y-1">
+        <StatSimRow label="脚力" desc="手番頻度" before={before.ability} after={after.ability} />
+        <StatSimRow label="スピード" desc="前進倍率" before={before.speed} after={after.speed} />
+        <StatSimRow label="やる気" desc="有効出目≤" before={before.motivation} after={after.motivation} />
+        <StatSimRow label="根性" desc="HP" before={before.grit} after={after.grit} />
+      </div>
+      {(extraDiceDiff !== 0 || extraRerollDiff !== 0) && (
+        <div className="flex gap-1.5 mt-2">
+          {extraDiceDiff > 0 && <span className="text-[11px] bg-blue-100 text-blue-700 px-2 py-0.5 rounded-full font-medium">🎲+{extraDiceDiff}</span>}
+          {extraRerollDiff > 0 && <span className="text-[11px] bg-purple-100 text-purple-700 px-2 py-0.5 rounded-full font-medium">↺+{extraRerollDiff}</span>}
+        </div>
+      )}
+    </div>
+  );
+}
+
+// ── Bottom sheet simulation panel ─────────────────────────────────────────────
+
+function SimulationPanel({ part, horses, myTurn, onConfirm, onClose }: {
+  part: Part;
+  horses: HorseState[];
+  myTurn: boolean;
+  onConfirm: () => void;
+  onClose: () => void;
+}) {
+  const modEntries = [
+    part.abilityMod !== 0 && { label: `脚力${part.abilityMod > 0 ? '+' : ''}${part.abilityMod}`, positive: part.abilityMod > 0 },
+    part.speedMod !== 0 && { label: `速度${part.speedMod > 0 ? '+' : ''}${part.speedMod}`, positive: part.speedMod > 0 },
+    part.motivationMod !== 0 && { label: `やる気${part.motivationMod > 0 ? '+' : ''}${part.motivationMod}`, positive: part.motivationMod > 0 },
+    part.gritMod !== 0 && { label: `根性${part.gritMod > 0 ? '+' : ''}${part.gritMod}`, positive: part.gritMod > 0 },
+    part.extraDice > 0 && { label: `🎲+${part.extraDice}`, positive: true },
+    part.extraReroll > 0 && { label: `↺+${part.extraReroll}`, positive: true },
+  ].filter(Boolean) as { label: string; positive: boolean }[];
+
+  return (
+    <div className="fixed inset-0 z-50 flex items-end">
+      {/* Backdrop */}
+      <div className="absolute inset-0 bg-black/50" onClick={onClose} />
+
+      {/* Panel */}
+      <div className="relative w-full max-h-[88vh] flex flex-col bg-white rounded-t-2xl shadow-2xl">
+        {/* Handle */}
+        <div className="flex justify-center pt-3 pb-1 flex-shrink-0">
+          <div className="w-10 h-1 bg-gray-300 rounded-full" />
+        </div>
+
+        {/* Header */}
+        <div className="px-4 py-3 border-b border-gray-100 flex-shrink-0">
+          <div className="flex items-start justify-between gap-2">
+            <div className="flex-1">
+              <p className="font-bold text-gray-900 text-xl leading-tight">{part.name}</p>
+              <span className={`inline-block mt-1 text-xs px-2 py-0.5 rounded border font-medium ${SLOT_COLOR[part.slot]}`}>
+                {getSlotLabel(part.slot)}
+              </span>
+            </div>
+            <button onClick={onClose} className="text-gray-400 hover:text-gray-600 text-3xl leading-none mt-[-4px]">×</button>
+          </div>
+          <div className="flex flex-wrap gap-1.5 mt-2">
+            {modEntries.map((m, i) => (
+              <span key={i} className={`text-xs px-2 py-0.5 rounded-full font-semibold ${m.positive ? 'bg-emerald-100 text-emerald-700' : 'bg-red-100 text-red-700'}`}>
+                {m.label}
+              </span>
+            ))}
+            {modEntries.length === 0 && <span className="text-xs text-gray-400">ステータス補正なし</span>}
+          </div>
+        </div>
+
+        {/* Simulation cards */}
+        <div className="flex-1 overflow-y-auto px-4 py-3">
+          <p className="text-xs text-gray-500 font-semibold mb-3 uppercase tracking-wide">装備時ステータスシミュレーション</p>
+          <div className="space-y-3">
+            {horses.map((h, i) => (
+              <HorseSimCard key={i} horse={h} part={part} />
+            ))}
+          </div>
+          <p className="text-xs text-gray-400 mt-3 text-center">
+            ※ 実際の装備はドラフト終了後の装備フェーズで行います
+          </p>
+        </div>
+
+        {/* Action buttons */}
+        <div className="px-4 py-4 border-t border-gray-100 flex gap-3 flex-shrink-0">
+          <button
+            onClick={onClose}
+            className="flex-1 py-3 bg-gray-100 hover:bg-gray-200 text-gray-700 font-bold rounded-xl transition-all"
+          >
+            閉じる
+          </button>
+          {myTurn && (
+            <button
+              onClick={onConfirm}
+              className="flex-[2] py-3 bg-emerald-600 hover:bg-emerald-700 active:scale-95 text-white font-bold rounded-xl transition-all shadow-md"
+            >
+              このパーツを選ぶ ✓
+            </button>
+          )}
+        </div>
+      </div>
+    </div>
+  );
+}
+
+// ── Part card (grid) ──────────────────────────────────────────────────────────
+
+function PartCard({ part, onClick, previewing }: { part: Part; onClick: () => void; previewing?: boolean }) {
   const mods = [
     part.abilityMod !== 0 && `脚力${part.abilityMod > 0 ? '+' : ''}${part.abilityMod}`,
     part.speedMod !== 0 && `速${part.speedMod > 0 ? '+' : ''}${part.speedMod}`,
@@ -30,10 +181,10 @@ function PartCard({ part, onClick, selected }: { part: Part; onClick?: () => voi
     <div
       onClick={onClick}
       className={`
-        rounded-xl border-2 p-3 transition-all cursor-pointer
-        ${selected
-          ? 'border-emerald-500 bg-emerald-50 shadow-md scale-105'
-          : 'border-gray-200 bg-white hover:border-emerald-400 hover:shadow-md'}
+        rounded-xl border-2 p-3 transition-all cursor-pointer select-none
+        ${previewing
+          ? 'border-emerald-500 bg-emerald-50 shadow-lg scale-[1.03]'
+          : 'border-gray-200 bg-white hover:border-emerald-400 hover:shadow-md active:scale-95'}
       `}
     >
       <div className="flex items-start gap-2 mb-2">
@@ -43,6 +194,7 @@ function PartCard({ part, onClick, selected }: { part: Part; onClick?: () => voi
             {getSlotLabel(part.slot)}
           </span>
         </div>
+        <span className="text-gray-300 text-lg leading-none">›</span>
       </div>
       <div className="flex flex-wrap gap-1">
         {mods.map((m, i) => (
@@ -58,11 +210,21 @@ function PartCard({ part, onClick, selected }: { part: Part; onClick?: () => voi
   );
 }
 
+// ── Main screen ───────────────────────────────────────────────────────────────
+
 export default function PartsDraftScreen({ state, dispatch, myTurn = true }: Props) {
+  const [previewPart, setPreviewPart] = useState<Part | null>(null);
+
   const player = state.players[state.currentDraftPlayerIndex];
   const totalPicks = 2 * state.playerCount;
   const progress = state.partsPicksDone;
   const phaseLabel = state.partsPhase === 'front' ? '前半（1〜9枚目）' : '後半（10〜18枚目）';
+
+  function handleConfirmPick() {
+    if (!previewPart) return;
+    dispatch({ type: 'SELECT_PART', partId: previewPart.id });
+    setPreviewPart(null);
+  }
 
   return (
     <div className="min-h-screen bg-emerald-900 p-4">
@@ -110,7 +272,7 @@ export default function PartsDraftScreen({ state, dispatch, myTurn = true }: Pro
         <div className={`text-center mb-4 p-3 rounded-xl border-2 ${COLOR_CLASS[player.color]}`}>
           <p className="text-white/80 text-sm">選択中</p>
           <p className="text-xl font-bold text-white">{player.name}</p>
-          <p className="text-white/80 text-sm">パーツを1枚選んでください</p>
+          <p className="text-white/80 text-sm">パーツをタップしてシミュレーション確認 → 選択</p>
         </div>
 
         {/* Available parts */}
@@ -119,7 +281,8 @@ export default function PartsDraftScreen({ state, dispatch, myTurn = true }: Pro
             <PartCard
               key={part.id}
               part={part}
-              onClick={() => dispatch({ type: 'SELECT_PART', partId: part.id })}
+              previewing={previewPart?.id === part.id}
+              onClick={() => setPreviewPart(previewPart?.id === part.id ? null : part)}
             />
           ))}
         </div>
@@ -147,6 +310,17 @@ export default function PartsDraftScreen({ state, dispatch, myTurn = true }: Pro
           </div>
         </div>
       </div>
+
+      {/* Simulation bottom sheet */}
+      {previewPart && (
+        <SimulationPanel
+          part={previewPart}
+          horses={player.horses}
+          myTurn={myTurn}
+          onConfirm={handleConfirmPick}
+          onClose={() => setPreviewPart(null)}
+        />
+      )}
     </div>
   );
 }
