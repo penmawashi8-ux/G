@@ -414,7 +414,7 @@ export function applyRollDice(state: GameState): GameState {
     ...state,
     battleRound: {
       ...round,
-      subPhase: maxRerolls > 0 ? "reroll" : "selectDefender",
+      subPhase: maxRerolls > 0 ? "reroll" : "resolve",
       diceResults: results,
       maxRerolls,
       rerollsUsed: 0,
@@ -441,7 +441,7 @@ export function applyRerollDice(state: GameState, indices: number[]): GameState 
       ...round,
       diceResults: newResults,
       rerollsUsed,
-      subPhase: rerollsUsed < round.maxRerolls ? "reroll" : "selectDefender",
+      subPhase: rerollsUsed < round.maxRerolls ? "reroll" : "resolve",
     },
     log: [...state.log, `リロール: [${newResults.join(", ")}]`],
   };
