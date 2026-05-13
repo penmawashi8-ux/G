@@ -10,12 +10,12 @@ interface Props {
 const dieFaces = ['', '⚀', '⚁', '⚂', '⚃', '⚄', '⚅'];
 
 export default function DiceRoller({ dieValue, speed, action, onConfirm }: Props) {
-  const success = dieValue > speed;
+  const success = dieValue >= speed;
 
   return (
     <div className="bg-gray-50 rounded-xl p-4">
       <p className="text-center text-xs text-gray-500 mb-3 font-medium">
-        スピード（{speed}）より大きい目が出たら成功
+        {speed}以上の目が出たら成功 → {action === 'advance' ? `${speed}マス前進` : '1ダメージ'}
       </p>
 
       {/* Die + result */}
@@ -47,7 +47,7 @@ export default function DiceRoller({ dieValue, speed, action, onConfirm }: Props
           : 'bg-gray-100 text-gray-500'}`}>
         {success
           ? action === 'advance'
-            ? `🏃 ${dieValue} マス前進！`
+            ? `🏃 ${speed} マス前進！`
             : `⚔️ 1 ダメージ！`
           : '行動できませんでした'}
       </div>

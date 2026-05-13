@@ -1,6 +1,7 @@
 import React, { useReducer, useEffect, useCallback, useRef, Component, ErrorInfo, ReactNode } from 'react';
 import { gameReducer, initialState, GameAction } from './gameReducer';
 import { getCpuAction } from './ai';
+import { useBgm } from './useBgm';
 import { pushState, subscribeToRoom } from './lib/supabase';
 import StartScreen from './components/StartScreen';
 import OnlineLobby from './components/OnlineLobby';
@@ -175,5 +176,23 @@ export default function App() {
     }
   })();
 
-  return <ErrorBoundary>{screen}</ErrorBoundary>;
+  return (
+    <ErrorBoundary>
+      {screen}
+      <MuteButton />
+    </ErrorBoundary>
+  );
+}
+
+function MuteButton() {
+  const { muted, toggle } = useBgm();
+  return (
+    <button
+      onClick={toggle}
+      className="fixed bottom-4 right-4 z-50 w-10 h-10 rounded-full bg-black/40 hover:bg-black/60 text-white text-lg flex items-center justify-center shadow-lg transition-all active:scale-90"
+      title={muted ? '音楽をオンにする' : '音楽をオフにする'}
+    >
+      {muted ? '🔇' : '🔊'}
+    </button>
+  );
 }

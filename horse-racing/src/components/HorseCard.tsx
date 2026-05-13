@@ -32,13 +32,13 @@ export function BaseHorseCard({ horse, selected, onClick, disabled }: BaseCardPr
       </div>
       {/* Stats */}
       <div className="px-4 py-3 space-y-2">
-        <StatLine label="スピード" value={horse.speed} description="この値より大きい出目で行動成功" />
+        <StatLine label="スピード" value={horse.speed} description="この値以上の目が出たら成功 → speed分前進" />
         <StatLine label="体力" value={horse.hp} description="HP（これ以上ダメージを受けると脱落）" />
       </div>
       {/* Mechanic hint */}
       <div className="px-4 pb-3">
         <div className="bg-gray-50 rounded-lg px-3 py-1.5 text-xs text-gray-500 text-center">
-          成功確率 <span className="font-bold text-gray-700">{Math.round((6 - horse.speed) / 6 * 100)}%</span>
+          成功確率 <span className="font-bold text-gray-700">{Math.round(Math.max(0, 7 - horse.speed) / 6 * 100)}%</span>
           <span className="mx-1.5 text-gray-300">|</span>
           前進期待値 <span className="font-bold text-gray-700">{expectedAdvance(horse.speed).toFixed(1)}</span> マス/回
         </div>
@@ -48,12 +48,8 @@ export function BaseHorseCard({ horse, selected, onClick, disabled }: BaseCardPr
 }
 
 function expectedAdvance(speed: number): number {
-  // E[advance] = sum of die values that beat speed, divided by 6
-  let total = 0;
-  for (let d = 1; d <= 6; d++) {
-    if (d > speed) total += d;
-  }
-  return total / 6;
+  // E[advance] = P(die >= speed) * speed = (7 - speed) / 6 * speed
+  return Math.max(0, (7 - speed) / 6) * speed;
 }
 
 // ── Equipped horse card (for race/equip screens) ─────────────────────────────
