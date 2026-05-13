@@ -1,7 +1,7 @@
-import React, { useState, useEffect } from 'react';
+import React, { useState } from 'react';
 import { GameState } from '../types';
 import { GameAction } from '../gameReducer';
-import { generateRoomCode, createRoom, joinRoom, subscribeToRoom } from '../lib/supabase';
+import { generateRoomCode, createRoom, joinRoom } from '../lib/supabase';
 
 interface Props {
   state: GameState;
@@ -15,16 +15,7 @@ export default function OnlineLobby({ state, dispatch, onSyncedDispatch }: Props
   const [status, setStatus] = useState('');
   const [loading, setLoading] = useState(false);
 
-  // Show current room code if already in a room
   const roomCode = state.onlineRoomCode;
-
-  useEffect(() => {
-    if (!roomCode) return;
-    const unsub = subscribeToRoom(roomCode, (newState) => {
-      dispatch({ type: 'SYNC_STATE', newState });
-    });
-    return unsub;
-  }, [roomCode]);
 
   async function handleHost() {
     setLoading(true);
