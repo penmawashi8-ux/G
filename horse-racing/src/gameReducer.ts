@@ -18,6 +18,7 @@ export type GameAction =
   | { type: 'SET_TEAM_MODE'; enabled: boolean }
   | { type: 'SET_GAME_MODE'; mode: GameMode; playerTypes: PlayerType[] }
   | { type: 'START_ONLINE_LOBBY' }
+  | { type: 'EXIT_ONLINE_LOBBY' }
   | { type: 'SYNC_STATE'; newState: GameState }
   | { type: 'SET_LOCAL_PLAYER'; index: number; roomCode: string }
   | { type: 'START_GAME' }
@@ -226,6 +227,16 @@ export function gameReducer(state: GameState, action: GameAction): GameState {
 
     case 'START_ONLINE_LOBBY':
       return { ...state, phase: 'online-lobby' };
+
+    case 'EXIT_ONLINE_LOBBY':
+      return {
+        ...state,
+        phase: 'start',
+        gameMode: 'local',
+        playerTypes: Array(state.playerCount).fill('human'),
+        onlineRoomCode: null,
+        localPlayerIndex: 0,
+      };
 
     case 'SYNC_STATE':
       return { ...action.newState };
