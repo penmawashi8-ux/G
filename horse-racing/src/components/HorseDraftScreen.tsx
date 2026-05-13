@@ -7,9 +7,10 @@ import { COLOR_CLASS, COLOR_LABEL } from '../data';
 interface Props {
   state: GameState;
   dispatch: React.Dispatch<GameAction>;
+  myTurn?: boolean;
 }
 
-export default function HorseDraftScreen({ state, dispatch }: Props) {
+export default function HorseDraftScreen({ state, dispatch, myTurn = true }: Props) {
   const isHonmei = state.phase === 'honmei-draft';
   const available: BaseHorse[] = isHonmei ? state.availableHonmei : state.availableTaikou;
   const player = state.players[state.currentDraftPlayerIndex];

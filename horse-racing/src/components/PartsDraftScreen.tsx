@@ -7,6 +7,7 @@ import { getSlotLabel } from '../utils';
 interface Props {
   state: GameState;
   dispatch: React.Dispatch<GameAction>;
+  myTurn?: boolean;
 }
 
 const SLOT_ICON: Record<string, string> = { jockey: '🏇', blinker: '👁', cheek: '🔷' };
@@ -59,7 +60,7 @@ function PartCard({ part, onClick, selected }: { part: Part; onClick?: () => voi
   );
 }
 
-export default function PartsDraftScreen({ state, dispatch }: Props) {
+export default function PartsDraftScreen({ state, dispatch, myTurn = true }: Props) {
   const player = state.players[state.currentDraftPlayerIndex];
   const totalPicks = 2 * state.playerCount;
   const progress = state.partsPicksDone;

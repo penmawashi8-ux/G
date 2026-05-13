@@ -7,6 +7,7 @@ import { getEffectiveStats, isEquipValid, getSlotLabel } from '../utils';
 interface Props {
   state: GameState;
   dispatch: React.Dispatch<GameAction>;
+  myTurn?: boolean;
 }
 
 const SLOT_ICON: Record<SlotType, string> = { jockey: '🏇', blinker: '👁', cheek: '🔷' };
@@ -36,7 +37,7 @@ function StatDiff({ label, base, eff, icon }: { label: string; base: number; eff
   );
 }
 
-export default function EquipScreen({ state, dispatch }: Props) {
+export default function EquipScreen({ state, dispatch, myTurn = true }: Props) {
   const pi = state.currentEquipPlayerIndex;
   const player = state.players[pi];
   const [selectedHorse, setSelectedHorse] = useState(0);
