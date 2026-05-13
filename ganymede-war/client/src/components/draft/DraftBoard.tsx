@@ -193,12 +193,33 @@ function SimulationPanel({ part, mechs, simulateStats, showPickButton, showNotMy
           if (!s) return null;
           return (
             <div key={m.id} className="px-3 py-2 rounded border border-cyan-600/40 bg-slate-900">
-              <span className="text-white font-semibold">{m.name}</span>
-              <span className="ml-2 text-cyan-100">SP {s.sp} / HP {s.hp} / AIM {s.aim} / 🎲 {s.dice} / ↩ {s.reroll}</span>
+              <div className="text-white font-semibold mb-1">{m.name}</div>
+              <div className="flex flex-wrap gap-x-3 gap-y-0.5 text-xs">
+                <StatCell label="SP"  value={s.sp}     mod={part.spMod} />
+                <StatCell label="HP"  value={s.hp}     mod={part.hpMod} />
+                <StatCell label="AIM" value={s.aim}    mod={part.aimMod} />
+                <StatCell label="🎲"  value={s.dice}   mod={part.bonusDice} />
+                <StatCell label="↩"   value={s.reroll} mod={part.bonusReroll} />
+              </div>
             </div>
           );
         })}
       </div>
     </div>
+  );
+}
+
+function StatCell({ label, value, mod }: { label: string; value: number; mod: number }) {
+  const valClass = mod > 0 ? "text-green-400 font-bold" : mod < 0 ? "text-red-400 font-bold" : "text-gray-300";
+  return (
+    <span className="inline-flex items-baseline gap-0.5">
+      <span className="text-gray-500">{label}</span>
+      <span className={valClass}>{value}</span>
+      {mod !== 0 && (
+        <span className={`text-xs ${mod > 0 ? "text-green-400" : "text-red-400"}`}>
+          ({mod > 0 ? "+" : ""}{mod})
+        </span>
+      )}
+    </span>
   );
 }
