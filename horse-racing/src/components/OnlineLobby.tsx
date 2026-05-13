@@ -38,9 +38,9 @@ export default function OnlineLobby({ state, dispatch, onSyncedDispatch }: Props
       localPlayerIndex: 0,
       playerTypes: ['human', 'human'],
     };
-    const ok = await createRoom(code, hostState);
-    if (!ok) {
-      setStatus('ルーム作成に失敗しました。Supabaseの設定を確認してください。');
+    const err = await createRoom(code, hostState);
+    if (err) {
+      setStatus(`エラー: ${err}`);
       setLoading(false);
       return;
     }
