@@ -7,7 +7,7 @@ import { Socket } from "socket.io-client";
 type AppSocket = Socket<ServerToClientEvents, ClientToServerEvents>;
 
 export function useSocket() {
-  const { socket, setSocket, setPlayerId, setGameState } = useGameStore();
+  const { socket, setSocket, setPlayerId, setGameState, setConnected } = useGameStore();
 
   useEffect(() => {
     if (socket) return;
@@ -19,6 +19,15 @@ export function useSocket() {
     s.on("connect", () => {
       setPlayerId(s.id ?? "");
       setSocket(s);
+      setConnected(true);
+    });
+
+    s.on("disconnect", () => {
+      setConnected(false);
+    });
+
+    s.on("connect_error", () => {
+      setConnected(false);
     });
 
     s.on("game_state", (state) => {

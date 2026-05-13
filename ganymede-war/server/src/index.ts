@@ -218,6 +218,7 @@ io.on("connection", (socket) => {
 
   // ── ルーム作成 ──────────────────────────────────────
   socket.on("create_room", (playerName, cb) => {
+    removePlayerBySocket(socket.id);
     const room = createRoom(socket.id, playerName);
     socket.join(room.code);
     cb(room.code);
@@ -226,6 +227,7 @@ io.on("connection", (socket) => {
 
   // ── CPU対戦ルーム作成 ────────────────────────────
   socket.on("create_cpu_room", (playerName, cb) => {
+    removePlayerBySocket(socket.id);
     const room = createRoom(socket.id, playerName);
     socket.join(room.code);
     addCpuPlayer(room);
