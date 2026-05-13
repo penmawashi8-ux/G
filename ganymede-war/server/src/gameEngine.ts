@@ -62,14 +62,17 @@ export function startDraft(
   allParts: PartCard[],
   playerIds: string[]
 ): DraftState {
+  const shuffledParts = shuffle(allParts);
   return {
     availableLeaders: shuffle(allLeaders).slice(0, 4),
     availableSupports: shuffle(allSupports).slice(0, 4),
-    availableParts: shuffle(allParts),
+    availableParts: shuffledParts.slice(0, 10),
+    remainingParts: shuffledParts.slice(10),
     step: "leader",
     pickOrder: [...playerIds],
     currentPickerIndex: 0,
     partsPickCount: 0,
+    partsPickInBatch: 0,
   };
 }
 
@@ -114,6 +117,7 @@ export function applyDraftPick(
     }
   } else {
     // parts: 8 picks total (4 each), alternating P1 P2 P1 P2...
+    // shown in batches of 10; after 4 picks per batch, discard remaining and show next 10
     const card = draft.availableParts.find((c) => c.id === cardId);
     if (!card) return state;
     player.hand = [...player.hand, card];
@@ -121,7 +125,15 @@ export function applyDraftPick(
     log.push(`${player.name} が「${card.name}」を選択`);
 
     newDraft.partsPickCount++;
+    newDraft.partsPickInBatch = (draft.partsPickInBatch ?? 0) + 1;
     newDraft.currentPickerIndex = newDraft.partsPickCount % draft.pickOrder.length;
+
+    // After both players each pick 2 in this batch, advance to next batch
+    if (newDraft.partsPickInBatch >= 4 && draft.remainingParts.length > 0) {
+      newDraft.availableParts = draft.remainingParts.slice(0, 10);
+      newDraft.remainingParts = draft.remainingParts.slice(10);
+      newDraft.partsPickInBatch = 0;
+    }
   }
 
   const totalParts = 8; // 4 per player × 2 players
