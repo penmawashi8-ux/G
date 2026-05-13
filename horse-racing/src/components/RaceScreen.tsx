@@ -10,11 +10,12 @@ import { HorseStateCard } from './HorseCard';
 interface Props {
   state: GameState;
   dispatch: React.Dispatch<GameAction>;
+  myTurn?: boolean;
 }
 
 const DIR_LABEL = { left: '左 ←', right: '右 →' };
 
-export default function RaceScreen({ state, dispatch }: Props) {
+export default function RaceScreen({ state, dispatch, myTurn = true }: Props) {
   const sub = state.raceSubPhase;
 
   const attacker = state.attackerPlayerIndex != null ? state.players[state.attackerPlayerIndex] : null;

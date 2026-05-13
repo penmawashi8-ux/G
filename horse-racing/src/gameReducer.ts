@@ -1,6 +1,6 @@
 import {
   GameState, GamePhase, Player, HorseState, Part, BaseHorse,
-  InitiativeCard, ActionType, SlotType,
+  InitiativeCard, ActionType, SlotType, GameMode, PlayerType,
 } from './types';
 import {
   BASE_HORSES_HONMEI, BASE_HORSES_TAIKOU, ALL_PARTS,
@@ -16,6 +16,10 @@ import {
 export type GameAction =
   | { type: 'SET_PLAYER_COUNT'; count: number }
   | { type: 'SET_TEAM_MODE'; enabled: boolean }
+  | { type: 'SET_GAME_MODE'; mode: GameMode; playerTypes: PlayerType[] }
+  | { type: 'START_ONLINE_LOBBY' }
+  | { type: 'SYNC_STATE'; newState: GameState }
+  | { type: 'SET_LOCAL_PLAYER'; index: number; roomCode: string }
   | { type: 'START_GAME' }
   | { type: 'SELECT_HONMEI'; horseId: string }
   | { type: 'SELECT_TAIKOU'; horseId: string }
@@ -42,6 +46,10 @@ export const initialState: GameState = {
   raceSubPhase: null,
   playerCount: 2,
   teamMode: false,
+  gameMode: 'local',
+  playerTypes: [],
+  localPlayerIndex: 0,
+  onlineRoomCode: null,
   players: [],
   startPlayerIndex: 0,
   currentDraftPlayerIndex: 0,
@@ -213,10 +221,25 @@ export function gameReducer(state: GameState, action: GameAction): GameState {
     case 'SET_TEAM_MODE':
       return { ...state, teamMode: action.enabled };
 
+    case 'SET_GAME_MODE':
+      return { ...state, gameMode: action.mode, playerTypes: action.playerTypes };
+
+    case 'START_ONLINE_LOBBY':
+      return { ...state, phase: 'online-lobby' };
+
+    case 'SYNC_STATE':
+      return { ...action.newState };
+
+    case 'SET_LOCAL_PLAYER':
+      return { ...state, localPlayerIndex: action.index, onlineRoomCode: action.roomCode, gameMode: 'online' };
+
     case 'RESET_GAME':
       return { ...initialState };
 
     case 'START_GAME': {
+      const playerTypes: PlayerType[] = Array.from({ length: state.playerCount }, (_, i) =>
+        state.playerTypes[i] ?? 'human'
+      );
       const players: Player[] = Array.from({ length: state.playerCount }, (_, i) => ({
         id: i,
         color: PLAYER_COLORS[i],
@@ -231,6 +254,7 @@ export function gameReducer(state: GameState, action: GameAction): GameState {
       return {
         ...state,
         phase: 'honmei-draft',
+        playerTypes,
         players,
         startPlayerIndex,
         currentDraftPlayerIndex: startPlayerIndex,

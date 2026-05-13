@@ -5,6 +5,7 @@ import { GameAction } from '../gameReducer';
 interface Props {
   state: GameState;
   dispatch: React.Dispatch<GameAction>;
+  myTurn?: boolean;
 }
 
 export default function RaceDistanceScreen({ state, dispatch }: Props) {

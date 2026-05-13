@@ -3,9 +3,12 @@ export type SlotType = 'jockey' | 'blinker' | 'cheek';
 export type HorseType = 'honmei' | 'taikou';
 export type ActionType = 'advance' | 'obstruct';
 export type Direction = 'left' | 'right';
+export type GameMode = 'local' | 'cpu' | 'online';
+export type PlayerType = 'human' | 'cpu';
 
 export type GamePhase =
   | 'start'
+  | 'online-lobby'
   | 'honmei-draft'
   | 'taikou-draft'
   | 'race-distance'
@@ -90,6 +93,10 @@ export interface GameState {
   raceSubPhase: RaceSubPhase | null;
   playerCount: number;
   teamMode: boolean;
+  gameMode: GameMode;
+  playerTypes: PlayerType[];
+  localPlayerIndex: number;
+  onlineRoomCode: string | null;
   players: Player[];
   startPlayerIndex: number;
 
@@ -130,8 +137,6 @@ export interface GameState {
   // Inheritance
   pendingInheritancePlayerIndex: number | null;
   pendingInheritanceFallenHorseIndex: number | null;
-
-  // Bond inheritance (team mode)
   pendingBondPlayerIndex: number | null;
   pendingBondFallenHorses: BaseHorse[];
 
