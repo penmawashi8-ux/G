@@ -27,7 +27,7 @@ function mod(v: number) {
 export default function PartCardUI({ part, onClick, disabled, selected, dim }: Props) {
   return (
     <div
-      className={`card-base flex flex-col gap-1.5 w-32 transition-all
+      className={`card-base flex flex-col gap-1 w-24 transition-all
         ${onClick && !disabled ? "cursor-pointer hover:border-blue-500" : ""}
         ${selected ? "border-blue-500 bg-blue-950" : ""}
         ${disabled ? "opacity-50 cursor-not-allowed" : ""}

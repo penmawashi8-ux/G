@@ -79,11 +79,13 @@ export interface InitiativeCard {
 export interface DraftState {
   availableLeaders: MechCard[];
   availableSupports: MechCard[];
-  availableParts: PartCard[];
+  availableParts: PartCard[];    // current batch of 10 shown
+  remainingParts: PartCard[];    // not yet revealed
   step: "leader" | "support" | "parts";
   pickOrder: string[];           // playerIds
   currentPickerIndex: number;
   partsPickCount: number;        // how many parts picks done (0-7)
+  partsPickInBatch: number;      // picks done in current batch (0-3)
 }
 
 export interface AssemblyData {

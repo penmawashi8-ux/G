@@ -20,10 +20,11 @@ export default function DraftBoard() {
     setSelectedPartId(null);
   }
 
+  const batchNum = Math.floor(draft.partsPickCount / 4) + 1;
   const stepLabel =
     draft.step === "leader" ? "長機を選択" :
     draft.step === "support" ? "僚機を選択" :
-    `パーツを選択 (${draft.partsPickCount}/8)`;
+    `パーツを選択 — ${batchNum}巡目 (${draft.partsPickInBatch ?? 0}/4)`;
   const allPreviewableParts = [...draft.availableParts, ...(me?.hand ?? [])];
   const hoverPart = allPreviewableParts.find((p) => p.id === hoverPartId) ?? null;
   const selectedPart = allPreviewableParts.find((p) => p.id === selectedPartId) ?? null;
@@ -78,8 +79,10 @@ export default function DraftBoard() {
 
       {draft.step === "parts" && (
         <div>
-          <h3 className="text-sm text-gray-500 uppercase tracking-widest mb-2">パーツ</h3>
-          <div className="flex flex-wrap gap-2">
+          <h3 className="text-sm text-gray-500 uppercase tracking-widest mb-2">
+            パーツ（{draft.availableParts.length}枚表示中）
+          </h3>
+          <div className="flex flex-wrap gap-1.5">
             {draft.availableParts.map((part) => (
               <div key={part.id} onMouseEnter={() => setHoverPartId(part.id)} onMouseLeave={() => setHoverPartId(null)}>
                 <PartCardUI
