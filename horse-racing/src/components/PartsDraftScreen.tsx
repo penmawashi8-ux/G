@@ -79,7 +79,7 @@ function SimulationPanel({ part, horses, myTurn, onConfirm, onClose }: {
   onClose: () => void;
 }) {
   const modEntries = [
-    part.speedMod !== 0 && { label: `スピード${part.speedMod > 0 ? '+' : ''}${part.speedMod}`, positive: part.speedMod < 0 },
+    part.speedMod !== 0 && { label: `スピード${part.speedMod > 0 ? '+' : ''}${part.speedMod}`, positive: part.speedMod > 0 },
     part.hpMod !== 0 && { label: `体力${part.hpMod > 0 ? '+' : ''}${part.hpMod}`, positive: part.hpMod > 0 },
   ].filter(Boolean) as { label: string; positive: boolean }[];
 
@@ -155,9 +155,9 @@ function SimulationPanel({ part, horses, myTurn, onConfirm, onClose }: {
 
 function PartCard({ part, onClick, previewing }: { part: Part; onClick: () => void; previewing?: boolean }) {
   const mods = [
-    part.speedMod !== 0 && { label: `スピード${part.speedMod > 0 ? '+' : ''}${part.speedMod}`, good: part.speedMod < 0 },
-    part.hpMod !== 0 && { label: `体力${part.hpMod > 0 ? '+' : ''}${part.hpMod}`, good: part.hpMod > 0 },
-  ].filter(Boolean) as { label: string; good: boolean }[];
+    part.speedMod !== 0 && { label: `スピード${part.speedMod > 0 ? '+' : ''}${part.speedMod}`, positive: part.speedMod > 0 },
+    part.hpMod !== 0 && { label: `体力${part.hpMod > 0 ? '+' : ''}${part.hpMod}`, positive: part.hpMod > 0 },
+  ].filter(Boolean) as { label: string; positive: boolean }[];
 
   return (
     <div
@@ -180,7 +180,7 @@ function PartCard({ part, onClick, previewing }: { part: Part; onClick: () => vo
       </div>
       <div className="flex flex-wrap gap-1">
         {mods.map((m, i) => (
-          <span key={i} className={`text-xs px-1.5 py-0.5 rounded font-medium ${m.good ? 'bg-green-100 text-green-700' : 'bg-red-100 text-red-700'}`}>
+          <span key={i} className={`text-xs px-1.5 py-0.5 rounded font-medium ${m.positive ? 'bg-green-100 text-green-700' : 'bg-red-100 text-red-700'}`}>
             {m.label}
           </span>
         ))}
