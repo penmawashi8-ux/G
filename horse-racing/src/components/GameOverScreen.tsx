@@ -1,7 +1,8 @@
-import React from 'react';
+import React, { useEffect } from 'react';
 import { GameState } from '../types';
 import { GameAction } from '../gameReducer';
 import { COLOR_CLASS } from '../data';
+import { sounds } from '../sounds';
 
 interface Props {
   state: GameState;
@@ -9,6 +10,8 @@ interface Props {
 }
 
 export default function GameOverScreen({ state, dispatch }: Props) {
+  useEffect(() => { sounds.win(); }, []);
+
   const isTeam = state.teamMode && state.winnerTeamId != null;
   const winnerPlayer = state.winnerPlayerIndex != null ? state.players[state.winnerPlayerIndex] : null;
   const winnerTeamPlayers = isTeam
