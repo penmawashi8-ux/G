@@ -1,9 +1,10 @@
 import { useEffect, useRef, useState } from 'react';
+import { getAudioContext, ensureRunning } from './audioContext';
 
 const BPM = 148;
 const B = 60 / BPM;
 
-// Upbeat racing melody in G major [freq_hz, duration_beats] (0 = rest)
+// Upbeat racing melody in G major [freq_hz, duration_beats]
 const MELODY: [number, number][] = [
   [392, 0.5], [440, 0.25], [494, 0.25],
   [523, 0.5], [494, 0.5],
@@ -25,21 +26,19 @@ const MELODY: [number, number][] = [
 
 const LOOP_DURATION = MELODY.reduce((s, [, d]) => s + d, 0) * B;
 
-interface BgmState {
-  ctx: AudioContext;
-  gain: GainNode;
-  rafId: number;
-}
-
 export function useBgm() {
   const [muted, setMuted] = useState(false);
-  const ref = useRef<BgmState | null>(null);
+  const gainRef = useRef<GainNode | null>(null);
+  const mutedRef = useRef(false);
+  const startedRef = useRef(false);
+  const nextLoopRef = useRef(0);
 
   useEffect(() => {
-    const ctx = new (window.AudioContext || (window as unknown as { webkitAudioContext: typeof AudioContext }).webkitAudioContext)();
+    const ctx = getAudioContext();
     const gain = ctx.createGain();
     gain.gain.value = 0.18;
     gain.connect(ctx.destination);
+    gainRef.current = gain;
 
     function playNote(freq: number, start: number, dur: number) {
       const osc = ctx.createOscillator();
@@ -62,39 +61,45 @@ export function useBgm() {
       }
     }
 
-    const AHEAD = 0.4;
-    let nextLoop = ctx.currentTime + 0.05;
-    scheduleLoop(nextLoop);
-    nextLoop += LOOP_DURATION;
+    let rafId: number;
 
     function tick() {
-      if (ref.current && ctx.currentTime + AHEAD >= nextLoop) {
-        scheduleLoop(nextLoop);
-        nextLoop += LOOP_DURATION;
+      if (startedRef.current && ctx.state === 'running' && !mutedRef.current) {
+        if (ctx.currentTime + 0.4 >= nextLoopRef.current) {
+          scheduleLoop(nextLoopRef.current);
+          nextLoopRef.current += LOOP_DURATION;
+        }
       }
-      if (ref.current) ref.current.rafId = requestAnimationFrame(tick);
+      rafId = requestAnimationFrame(tick);
     }
 
-    const rafId = requestAnimationFrame(tick);
-    ref.current = { ctx, gain, rafId };
+    async function onInteraction() {
+      if (startedRef.current) return;
+      const ok = await ensureRunning();
+      if (!ok) return;
+      startedRef.current = true;
+      // Schedule first loop starting just ahead of now
+      nextLoopRef.current = ctx.currentTime + 0.05;
+    }
 
-    // Resume on first user interaction (needed for mobile Safari / Chrome autoplay policy)
-    const resume = () => { if (ctx.state === 'suspended') ctx.resume(); };
-    document.addEventListener('click', resume, { once: true });
-    document.addEventListener('touchstart', resume, { once: true });
+    document.addEventListener('click', onInteraction);
+    document.addEventListener('touchstart', onInteraction, { passive: true });
+    rafId = requestAnimationFrame(tick);
 
     return () => {
       cancelAnimationFrame(rafId);
-      ctx.close();
-      ref.current = null;
+      document.removeEventListener('click', onInteraction);
+      document.removeEventListener('touchstart', onInteraction);
+      gain.disconnect();
+      gainRef.current = null;
     };
   }, []);
 
   function toggle() {
-    if (!ref.current) return;
-    const { ctx, gain } = ref.current;
-    if (ctx.state === 'suspended') ctx.resume();
-    const newMuted = !muted;
+    const gain = gainRef.current;
+    if (!gain) return;
+    const newMuted = !mutedRef.current;
+    mutedRef.current = newMuted;
     gain.gain.value = newMuted ? 0 : 0.18;
     setMuted(newMuted);
   }

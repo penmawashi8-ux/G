@@ -1,4 +1,5 @@
-import React from 'react';
+import React, { useEffect } from 'react';
+import { sounds } from '../sounds';
 
 interface Props {
   dieValue: number;
@@ -11,6 +12,8 @@ const dieFaces = ['', '⚀', '⚁', '⚂', '⚃', '⚄', '⚅'];
 
 export default function DiceRoller({ dieValue, speed, action, onConfirm }: Props) {
   const success = dieValue >= speed;
+
+  useEffect(() => { sounds.dice(); }, []);
 
   return (
     <div className="bg-gray-50 rounded-xl p-4">

@@ -1,4 +1,4 @@
-import React from 'react';
+import React, { useEffect, useRef } from 'react';
 import { GameState, ActionType, RaceSubPhase } from '../types';
 import { GameAction } from '../gameReducer';
 import { COLOR_CLASS, COLOR_LABEL, COLOR_BORDER } from '../data';
@@ -6,6 +6,7 @@ import { getEffectiveStats, isDiceSuccess } from '../utils';
 import TrackBoard from './TrackBoard';
 import DiceRoller from './DiceRoller';
 import { HorseStateCard } from './HorseCard';
+import { sounds } from '../sounds';
 
 interface Props {
   state: GameState;
@@ -49,6 +50,45 @@ function BattleStepIndicator({ current }: { current: RaceSubPhase | null }) {
 
 export default function RaceScreen({ state, dispatch }: Props) {
   const sub = state.raceSubPhase;
+  const prevSubRef = useRef<RaceSubPhase | null>(null);
+
+  // Sound effects on subphase transitions
+  useEffect(() => {
+    const prev = prevSubRef.current;
+    if (sub !== prev) {
+      if (sub === 'draw-initiative') {
+        sounds.card();
+      } else if (sub === 'resolve' && state.diceValues.length > 0) {
+        const attackerStats = state.attackerPlayerIndex != null && state.attackerHorseIndex != null
+          ? getEffectiveStats(state.players[state.attackerPlayerIndex].horses[state.attackerHorseIndex])
+          : null;
+        if (attackerStats) {
+          const success = isDiceSuccess(state.diceValues[0], attackerStats.speed);
+          if (!success) {
+            sounds.fail();
+          } else if (state.declaredAction === 'advance') {
+            sounds.advance();
+          } else {
+            sounds.attack();
+          }
+        }
+      }
+      prevSubRef.current = sub;
+    }
+  });
+
+  // Play fall sound when a horse is eliminated
+  const totalFallen = state.players.reduce(
+    (n, p) => n + p.horses.filter(h => h.fallen).length,
+    0,
+  );
+  const prevFallenRef = useRef(0);
+  useEffect(() => {
+    if (totalFallen > prevFallenRef.current) {
+      sounds.fall();
+    }
+    prevFallenRef.current = totalFallen;
+  }, [totalFallen]);
 
   const attacker = state.attackerPlayerIndex != null ? state.players[state.attackerPlayerIndex] : null;
   const attackerHorse = attacker && state.attackerHorseIndex != null ? attacker.horses[state.attackerHorseIndex] : null;
