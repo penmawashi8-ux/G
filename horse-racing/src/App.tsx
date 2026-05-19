@@ -113,6 +113,7 @@ export default function App() {
     state.raceSubPhase,
     state.currentDraftPlayerIndex,
     state.currentEquipPlayerIndex,
+    state.players,
     state.attackerPlayerIndex,
     state.defenderPlayerIndex,
     state.pendingInheritancePlayerIndex,

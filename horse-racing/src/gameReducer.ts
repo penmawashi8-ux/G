@@ -277,12 +277,14 @@ export function gameReducer(state: GameState, action: GameAction): GameState {
       const log = `${state.players[pi].name}が${horse.name}を選択`;
 
       if (picked === state.playerCount) {
+        const nextStart = (state.startPlayerIndex + 1) % state.playerCount;
         return addLog({
           ...state,
           players: newPlayers,
           availableHonmei: state.availableHonmei.filter(h => h.id !== horse.id),
           phase: 'taikou-draft',
-          currentDraftPlayerIndex: state.startPlayerIndex,
+          startPlayerIndex: nextStart,
+          currentDraftPlayerIndex: nextStart,
         }, log);
       }
       return addLog({
@@ -304,11 +306,13 @@ export function gameReducer(state: GameState, action: GameAction): GameState {
       const log = `${state.players[pi].name}が${horse.name}を選択`;
 
       if (picked === state.playerCount) {
+        const nextStart = (state.startPlayerIndex + 1) % state.playerCount;
         return addLog({
           ...state,
           players: newPlayers,
           availableTaikou: state.availableTaikou.filter(h => h.id !== horse.id),
           phase: 'race-distance',
+          startPlayerIndex: nextStart,
           raceDistanceDie: null,
         }, log);
       }
@@ -354,13 +358,15 @@ export function gameReducer(state: GameState, action: GameAction): GameState {
 
       if (newPicksDone >= totalPicks) {
         if (state.partsPhase === 'front') {
+          const nextStart = (state.startPlayerIndex + 1) % state.playerCount;
           return addLog({
             ...state,
             players: newPlayers,
             currentDraftParts: state.backDraftParts,
             partsPhase: 'back',
             partsPicksDone: 0,
-            currentDraftPlayerIndex: state.startPlayerIndex,
+            startPlayerIndex: nextStart,
+            currentDraftPlayerIndex: nextStart,
           }, log);
         } else {
           return addLog({
