@@ -35,6 +35,7 @@ export default function OnlineLobby({ state, dispatch, onSyncedDispatch }: Props
       onlineRoomCode: code,
       localPlayerIndex: 0,
       playerTypes,
+      gameMode: 'online',
     };
     const err = await createRoom(code, hostState);
     if (err) {
@@ -69,13 +70,14 @@ export default function OnlineLobby({ state, dispatch, onSyncedDispatch }: Props
       return;
     }
     // Mark our slot as human and push to Supabase so host sees us
+    // localPlayerIndex is device-specific; push only shared state
     const updatedTypes: PlayerType[] = remoteState.playerTypes.map((t, i) =>
       i === guestIndex ? 'human' : t
     ) as PlayerType[];
-    const updatedState: GameState = { ...remoteState, playerTypes: updatedTypes, localPlayerIndex: guestIndex };
-    await pushState(code, updatedState);
-    dispatch({ type: 'SYNC_STATE', newState: updatedState });
+    const sharedState: GameState = { ...remoteState, playerTypes: updatedTypes };
+    await pushState(code, sharedState);
     dispatch({ type: 'SET_LOCAL_PLAYER', index: guestIndex, roomCode: code });
+    dispatch({ type: 'SYNC_STATE', newState: sharedState });
     setMode('join');
     setStatus('');
     setLoading(false);

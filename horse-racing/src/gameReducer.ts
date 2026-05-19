@@ -225,7 +225,7 @@ export function gameReducer(state: GameState, action: GameAction): GameState {
       };
 
     case 'SYNC_STATE':
-      return { ...action.newState };
+      return { ...action.newState, localPlayerIndex: state.localPlayerIndex };
 
     case 'SET_LOCAL_PLAYER':
       return { ...state, localPlayerIndex: action.index, onlineRoomCode: action.roomCode, gameMode: 'online' };
