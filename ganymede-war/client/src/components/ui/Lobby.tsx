@@ -57,9 +57,9 @@ export default function Lobby() {
     <div className="flex flex-col items-center justify-center h-full min-h-[80vh] gap-8 px-4">
       <div className="text-center">
         <h2 className="text-5xl font-extrabold tracking-widest text-blue-400 mb-2">
-          GANYMEDE WAR
+          MECH SIEGE
         </h2>
-        <p className="text-gray-500 text-sm tracking-widest">ZERO +</p>
+        <p className="text-gray-500 text-sm tracking-widest">ZERO+</p>
       </div>
 
       <div className="w-full max-w-sm flex flex-col gap-3">

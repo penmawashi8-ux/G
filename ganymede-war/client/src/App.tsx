@@ -22,7 +22,7 @@ export default function App() {
       )}
       <header className="border-b border-gray-800 px-6 py-3 flex items-center justify-between">
         <h1 className="text-lg font-bold tracking-widest text-blue-400">
-          GANYMEDE WAR <span className="text-gray-500 text-sm">ZERO+</span>
+          MECH SIEGE <span className="text-gray-500 text-sm">ZERO+</span>
         </h1>
         {gameState && (
           <span className="text-xs text-gray-500 uppercase tracking-widest">
